@@ -1,0 +1,9 @@
+See pop.jflex.l, it seems to be working.
+
+To get output:
+jflex pop.jflex.l    # makes Lexer.java (the name is in the %class request)
+It looks like you would need a driver with these features:
+    a main method
+    instantiate a Reader
+    pass that to to Lexer constructor
+    loop until yylex returns null

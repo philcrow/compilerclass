@@ -1,0 +1,17 @@
+=head1 Introduction to Text Processing and Compiling
+
+=head2 by Phil Crow
+
+=head2 INTRODUCTION
+
+This is a course about text processing. Compiling is just one famous
+example. Everything starts with something people can read and write
+directly in a text editor. The ending point could be assembly language
+code, bytecodes for a virtual machine, a viewable output file in PDF or png
+format, or translation from one human readable language to another.
+
+The key features are breaking the input into tokens, recognizing those
+tokens with a grammar, producing an abstract syntax tree, and emitting
+something useful. Along the way we will also talk about symbol tables
+and interpretting code.
+

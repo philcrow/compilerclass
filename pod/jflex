@@ -1,0 +1,93 @@
+JFlex is a Scanner Generator
+A scanner breaks text into tokens. In English, each word and punctuation
+symbol is a token. In a programming language tokens are things like
+
+    #include
+    if
+    while
+    int
+    someVarName
+    aMethodName
+    (
+
+https://mdasifbinkhaled.wordpress.com/2016/03/26/how-to-install-jflex-in-windows-10/
+https://www.youtube.com/watch?v=IV1Rwq7ERR4
+
+If you are on Linux, you can install with
+
+    sudo apt intall jflex
+
+My Example
+
+Once upon a time I used Perl a lot. That language has a documentation
+system sort of like javadoc. It is called Plain Old Documentation (pod).
+
+It looks like this:
+
+    =head1 Introduction to Text Processing and Compiling
+
+    =head2 by Phil Crow
+
+    =head2 INTRODUCTION
+
+    This is a course about text processing. Compiling is just one famous
+    example. Everything starts with something people can read and write
+    directly in a text editor. The ending point could be assembly language
+    code, bytecodes for a virtual machine, a viewable output file in PDF or png
+    format, or translation from one human readable language to another.
+
+    The key features are breaking the input into tokens, recognizing those
+    tokens with a grammar, producing an abstract syntax tree, and emitting
+    something useful. Along the way we will also talk about symbol tables
+    and interpretting code.
+
+Many people have written engines to render this in nice ways. HTML is common
+output destination. Let's use jflex to translate this into HTML.
+
+Create a file called pod.l (I call my files pod.jflex.l to distinguish them
+from files intended for the original C based flex tool).
+
+JFlex files have sections separated by double percent. For this example,
+we don't need the first section, so we start with two percents. In the
+second section, we make requests and declare our patterns. In the third
+section we have rules. Each rule begins with a pattern, then has a Java
+code block to perform when that pattern is seen.
+
+    %%
+    %class Lexer
+    %standalone
+
+    Head1 = "=head1" .*
+
+    %%
+    {Head1} {
+        System.out.print("<h1>" + yytext().substring(6).trim() + "</h1>" );
+    }
+
+%class specifies the name of the class jflex will make for us.
+%standalone tells jflex to give that file a main method so we can use
+it alone. Later we will be using jflex with other tools that provide the
+main method.
+
+Next is the pattern definition. On the left is a name of my choice, I picked
+Head1. Then there is an equal sign. On the right is the regular expression
+for the pattern.
+
+In a pattern, literals go in double quotes. Dot matches anything, except
+a new line. The star means repeat zero or more times.
+
+So, Head1 says, look for =head1 and anything that follows it up to the
+end of the line (but not the new line itself).
+
+In the rules section, we put the pattern name in braces, following that with
+code to run when the patter matches.
+
+You can use any Java you like (but you need the top section if you
+are going to import from packages other than java.lang). In the code block,
+you can call a special method yytext to retrieve what matched.
+Here, I call that, then throw away the first six characters ("=head1 ") and
+trim the result. I pass that to System.out.print (not println, the newline
+was not matched).
+
+Anything that is not covered by a rule is printed as is.
+
