@@ -1,0 +1,78 @@
+Example
+
+Suppose we want to add numbers. There are lots of tools that do this, but
+we will learn about compilers from building our own. Overtime we will expand
+it.
+
+A Program
+
+4+5
+
+When we run this program we want to see 9 on the screen.
+
+Steps:
+    1. break input into tokens, here those are 4, plus sign, and 5
+    2. parse those tokens with a grammar
+        grammar Calc;
+        program : NUMBER '+' NUMBER ;
+        NUMBER : [0-9] ;
+
+    3. make the antlr parser:
+       antlr4 Calc.g4
+       javac *.java
+       grun Calc program -gui -tokens -tree
+       4+5
+       <CTRL-D> or <CTRL-Z>
+
+    4. use the resulting abstract syntax tree to compute the answer
+
+       program
+         /|\
+        / | \
+       4  +  5
+
+We'll have a plus method of some kind that will retrieve the children,
+add them together and print.
+
+Shortcomings
+
+    1. all numbers are single digit and positive not floats no negatives
+       nothing bigger 9
+    2. spaces are not allowed, including new line
+    3. we might want other operations like -, *, and /
+
+But, we can use what we have to get our first calculator.
+We need two things:
+
+    1. we need a main method in a class which drives the process:
+       a. collect input
+       b. uses the helpers (lexer, parser)
+       c. starts a tree walk
+    2. Listener to walk the tree and do the calculation
+
+The main methods are highly similar. See CalcRunner.java.
+Only the names change (the lexer, the parser, etc.). The
+names are prefixed with the grammar name.
+
+To implement our language, we will write an interpretter.
+
+    cp CalcBaseListener.java Interpretter.java
+    edit to:
+        add extends in front of CalcBaseListener, it is our parent
+        add Interpretter as the class name
+        delete all the Override methods, except enterProgram
+
+The ctx object there is defined in CaldParser, so we can look there
+for our ctx class and use the methods.
+
+We can collect all the numbers by calling NUMBER(). Then, we
+can loop through those, adding to a total which we print.
+When we produce our output, we have written our very own interpretted
+language!
+
+Assignment:
+Fix issues in the shortcomings list.
+    1. allow numbers to have multiple digits, and maybe be negative
+    2. figure out how to skip whitespace
+    3. expand the grammar
+Don't spend more than 2 hours, see what you can fix.

@@ -1,0 +1,57 @@
+Intro
+
+Personal Intros
+(If not already done.)
+
+Compiling is translating a human readable source code language
+into something else. That something else could be a PDF.
+
+Dot is a language that describes directed graphs.
+When you run the dot compiler, you get graphical output like png.
+
+    make a file called family.dot, use a text editor to put this in it:
+    digraph { Mom -> Me }
+    dot -Tpng -o family.png family.dot
+
+Tex and LaTeX are languages that describe documents. You type the
+commands and the contents into a text editor and get out PDF or
+PostScript, etc.
+
+    \documentclass{article}
+    \title{A Sample}
+    \author{Phil Crow}
+    \begin{document}
+    \maketitle
+
+    This is a simple sample of a LaTeX article.
+
+    \end{document}
+
+Typescript is a language for web browser control which is compiled
+to javascript, which the browser knows how to run. A compiler that
+does this is called a transpiler.
+
+javac is a tool that compiles Java source code in to JVM byte codes.
+The JVM is the Java Virtual Machine which has been ported to many
+platforms (Intel, AMD, Mac OS, Linux, etc.)
+
+Infocomm had a famous example of that for text adventure games in the 80s.
+It was called the z-machine.
+
+gcc compiles C source code to assembly and oversees turning that into
+an executable. Some people think that if you don't emit assembly or
+machine code you don't have a Real tm compiler.
+
+But, there are also interpretted languages which don't emit,
+but run what the parser builds. These are slower and sometimes
+harder to use, especially if they go one statement at a time like bash.
+Then you can't have any forward references.
+
+Theme: take a source code lanuage, transform it into something different,
+usually something that can run or render on a computer or virtual machine.
+
+Tool Installation
+
+We are going to use antlr4 to get started. We may use other tools later.
+Let's get that on your machine.
+

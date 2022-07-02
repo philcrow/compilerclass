@@ -1,0 +1,345 @@
+Review student work.
+4:49
+Advance the grammar to a little language.
+Borrowed from The Definitive ANTLR4 Reference, by Terence Parr
+who wrote the antlr tool.
+
+Tokens
+
+    lexer grammar CommonLexerRules ;
+
+    ID : [a-zA-Z]+ ;
+    INT : [0-9]+ ;
+    NEWLINE : '\r'? '\n' ;
+    WS : [ \t] -> skip ;
+
+This separates the tokens from the grammar. When we do that, we use
+
+    lexer grammar
+
+instead of just grammar.
+
+Think about these expressions.
+
+ID only allows letters, but is simpler than the more robust offering in
+other languages.
+
+    [_a-zA-Z] [_a-zA-Z0-9]*
+
+etc. (Javascript even allows a $ in the variable name at any point.)
+
+INT only allows positives.
+
+    [0-9]+
+
+NEWLINE accounts for Windows and Unix line endings.
+
+WS is now limited to just space and tab (horizontal whitespace), because
+this language uses newline as the statement terminator.
+
+Rules
+
+    grammar Expr;
+    import CommonLexerRules;
+
+    program : statement+ ;
+
+    statement : expr NEWLINE
+              | ID '=' expr NEWLINE
+              | NEWLINE
+              ;
+
+    expr : expr ('*'|'/') expr
+         | expr ('+'|'-') expr
+         | INT
+         | ID
+         | '(' expr ')'
+         ;
+
+First, import the lexer rules. Then, express the grammar.
+
+A program is one or more statements.
+
+A statement is an expr followed by a newline OR an ID, an equal
+sign, and a newline, OR just a blank line. There are no comments
+in this language, but you can space things out.
+
+Example program:
+
+    x = 5
+    3 + x
+
+This would print 5 and then 8.
+
+The expr rule is complex and involves recursion.
+That is, the rule name appears in its own alternatives, both at
+the start, in the middle, and at the end.
+
+It's actually quite a trick to write a parser that can handle left
+recursion (where the rule is named in the first position of any
+alternative).
+
+But, this says that an expr can multiply or divide two other exprs OR
+add or subtract them OR it could be an INT, an ID, or another expr
+wrapped in parentheses.
+
+The operators * and / are together because they share a precedence level.
+Likewise, + and - are together for the same reason. Further, * and /
+are listed first which tells antlr that they have the higher precedence.
+
+    antlr4 Expr.g4
+    javac *.java
+    grun Expr program -tree -gui
+    3+4
+    CTRL-D
+
+Try some others, including with syntax errors.
+
+Better Labels
+
+Before we write code to do the computation, we are going to make some
+changes. It is inconvenient to have multiple alternatives in the
+grammar without labeling them. Without labels, they will all end
+up being handled in the same method. So, we want labels.
+
+First, it is nice to have some tokens for the operators. In CommonLexerRules.g4
+
+    MUL : '*' ;
+    DIV : '/' ;
+    ADD : '+' ;
+    SUB : '-' ;
+
+It is not necessary to replace the literals in the parser grammar with these.
+We do want to label the operatator. And,
+we want label to rule alternatives, so each gets its own method.
+
+    grammar Expr;
+    import CommonLexerRules;
+
+    program : statement+ ;
+
+    statement : expr NEWLINE            # printExpr
+              | ID '=' expr NEWLINE     # assign
+              | NEWLINE                 # blank
+              ;
+
+    expr : expr op=('*'|'/') expr       # MulDiv
+         | expr op=('+'|'-') expr       # AddSub
+         | INT                          # int
+         | ID                           # id
+         | '(' expr ')'                 # parens
+         ;
+
+Notice op=, this names the value captured by the next regular expression.
+
+The alternative labels look like end of line comments, but antlr4 will use them
+in method names.
+
+Making it Calculate
+
+    antlr4 Expr.g4 -visitor -no-listener
+    javac *.java
+    grun Expr program -tree -gui
+
+When last we made a runner to use an antlr parser we used the Listener
+approach. That generated an enter an exit method for each rule in
+the grammar. Now we want to switch to the Visitor approach.
+
+You have to ask to receive the visitor and to stop generation of the listener.
+
+In the Listener approach your methods are magically called as the
+library code walks the tree for you. In the Visitor approach we
+do more to drive the walk of the tree. This requires
+more effort, but gives us more control.
+
+Our runner is similiar to the earlier ones, but visits instead of walking.
+
+    import org.antlr.v4.runtime.*;
+    import org.antlr.v4.runtime.tree.*;
+    
+    // Visitor approach
+    public class Runner {
+        public static void main(String[] args) throws Exception {
+            // As before with only name changes.
+            CharStream        input  = CharStreams.fromFileName(args[0]);
+            ExprLexer         lexer  = new ExprLexer(input);
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            ExprParser        parser = new ExprParser(tokens);
+            ParseTree         tree   = parser.program();
+    
+            // Our custom code
+            EvalVisitor  eval = new EvalVisitor();
+            eval.visit(tree);
+        }
+    }
+
+The only change is really the last two lines. There are also name changes
+to fit the new grammar. And, I removed the ParseTreeWalker.
+
+ANTLR4 generates the interface ExprVisitor.java and ExprBaseVisitor.java
+to implement it. As before, all the methods are stubbed in
+ExprBaseVisitor. We subclass that and implement the methods we actually
+care about.
+
+    import java.util.HashMap;
+    import java.util.Map;
+    
+    public class EvalVisitor extends ExprBaseVisitor<Integer> {
+        // symbol table
+        Map<String, Integer> symbolTable = new HashMap<>();
+    
+        @Override
+        public Integer visitAssign(ExprParser.AssignContext ctx) {
+            String id = ctx.ID().getText(); // get the variable name
+            int value = visit(ctx.expr());  // walk the expression subtree for value
+    
+            symbolTable.put(id, value);     // store the variable in the symbol table
+            return value;
+        }
+    
+        @Override
+        public Integer visitPrintExpr(ExprParser.PrintExprContext ctx) {
+            Integer value = visit(ctx.expr());
+            System.out.println(value);
+            return 0;
+        }
+    
+        @Override
+        public Integer visitInt(ExprParser.IntContext ctx) {
+            return Integer.valueOf(ctx.INT().getText());
+        }
+    
+        @Override
+        public Integer visitId(ExprParser.IdContext ctx) {
+            String id = ctx.ID().getText();
+    
+            if (symbolTable.containsKey(id)) {
+                return symbolTable.get(id);
+            }
+            else {
+                System.err.println( "undefined symbol: " + id + " using 0");
+                return 0;
+            }
+        }
+    
+        @Override
+        public Integer visitMulDiv(ExprParser.MulDivContext ctx) {
+            Integer left = visit(ctx.expr(0));
+            Integer right = visit(ctx.expr(1));
+    
+            if (ctx.op.getType() == ExprParser.MUL) {
+                return left * right;
+            }
+            else {
+                return left / right;
+            }
+        }
+    
+        @Override
+        public Integer visitAddSub(ExprParser.AddSubContext ctx) {
+            Integer left = visit(ctx.expr(0));
+            Integer right = visit(ctx.expr(1));
+    
+            if (ctx.op.getType() == ExprParser.ADD) {
+                return left + right;
+            }
+            else {
+                return left - right;
+            }
+        }
+    
+        @Override
+        public Integer visitParens(ExprParser.ParensContext ctx) {
+            return visit(ctx.expr());
+        }
+    }
+
+Since this language allows us to define variables, we need a way to
+keep track of their names and current values. We do that with a symbol
+table. Since we are only doing integer math, we can have a simple table
+which is just a map whose key is the variable name. That entry stores
+the current value of the variable. When languages have more types,
+they need a more complicated symbol table, because the values are
+of those different types.
+
+visitAssign
+
+When the walker visits an assign statement, it calls our visitAssign.
+There we lookup the name of the ID, then call visit on the child
+expr. This allows the assignment to capture an arbitrary expression
+value instead of just a literal number.
+
+Once we know the name and the value, we put the symbol into the table.
+This makes it available to any other expression that refers to the variable.
+Finally, we return the value. It's not really valid to nest this construct,
+but we have to return something.
+
+visitPrintExpr
+
+Our printExpr label is on the alternative that lists only an expression.
+In that case, we visit the expression and print whatever that returns.
+Then we return 0, since the visitor demands that all functions return
+the same type.
+
+visitInt
+
+When the walker visits a leaf node, it is customary to return the value
+for that leaf. Here, we make and return an int from whatever the INT
+token captured.
+
+visitId
+
+Arriving in visitId means that someone wants the value of a variable.
+We pull out the the ID of the variable and look it up in the symbol table.
+If it is there, we return the value in the table. Otherwise, we complain
+and give back zero. The ctx object does have information about where
+this was in the source code. We should give that information to our
+user.
+
+visitMulDiv and visitAddSub
+
+Now we do the calculations. From the context object, we visit the left
+and right expr. These are numbered from zero. Once we have the operands,
+we test the "op" regular expression to see which operation we should
+perform. Check back in the grammar to see where we added "op=" to
+label the regular expresssion for these operators.
+
+Once you know what to do, you simply perform the operation and return
+the result.
+
+visitParens
+
+Finally, visitParens simply returns whatever walking its expr returns.
+
+That's it. A simple program looks like this:
+
+    x = 4
+    3 + x * 2
+
+This prints 11. Note that means it understands that multiplication has
+precedence over addition (otherwise the answer would be 14).
+
+Exercises
+
+1. Remove the calculations from EvalVisitor.java. In their place
+   emit the expressions in postfix notation with one item per line
+   ready for the dc unix calculator. End the output with a p to pop
+   the stack and print the result.
+   So 3 + 2 becomes
+   3
+   2
+   +
+   p
+   Alternatively, omit the p and send to a python stack machine:
+   ~/training/college.courses/compilers/stackmachine/machine.py
+
+2. Convert Expr.g4 to do floating point Math. You will need to
+   replace the INT token with a NUMBER that captures floats,
+   then change the visitor to use Double instead of Integer.
+   Please allow negative numbers.
+
+3. Pick a language and parse it. Don't plan on parsing all of it.
+   Make a subset of features. Start small and build.
+   Choose from these or find your own.
+   JSON (see json.org)
+   Inform 6

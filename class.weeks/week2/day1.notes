@@ -1,0 +1,67 @@
+Fixing Shortcomings
+
+Review student work.
+
+    grammar Calc;
+
+    program: NUMBER '+' NUMBER ;
+
+    NUMBER: '-'? [0-9]+ ;
+    WS: [ \t\n\r] -> skip ;
+
+This fixes two of the issues: whitespace is no allowed between tokend
+and numbers can actually be integers.
+
+Regular expression summary
+
+Character class: [x-y] x is the first char (in ascii order) y is the last,
+both are included in this range.
+
+? means optional (zero or one)
+
++ means one or more
+
+* means optional but repeatable (zero or as many as you like)
+
+This is about all we need to know about regular expressions for now.
+
+Using this grammer, we can parse a program like this without errors or warnings:
+
+    -15 + -24
+
+Our previous code will turn that into the correct answer.
+
+Numbers are complicated, see:
+https://www.json.org/json-en.html
+
+Adding multiplication requires some new syntax.
+
+    grammar Calc;
+
+    program : NUMBER '*' NUMBER  # Mulitply
+            | NUMBER '+' NUMBER  # Add
+            ;
+
+    NUMBER: '-'? [1-9][0-9]+ ;
+    WS: [ \t\n\r] -> skip ;
+
+So we have a new program alternative. We read all of that as
+
+    a program is a number, a star, and another number, which we call Multiply
+    OR
+    a number, a plus, and another number, which we call Add
+
+After we generate with this, the listenerll have enterMultiply, exitMultiply,
+and the same for Add, but will no longer have the enter/exit Program methods.
+So, we have to change our interpretter.
+
+See Interpretter.java
+
+Shortcomings:
+
+    1. we still don't have division or subtraction
+    2. we can't have more than one operator, we want to allow 2 * 3 + 4
+    3. we don't have parentheses, we want to allow 2 * (3 + 4)
+    4. our numbers are not quite right we allow 0000 to count, but
+       we would like to have fractions as well like 3.5 or 6.02e23
+
