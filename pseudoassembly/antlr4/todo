@@ -1,0 +1,28 @@
+Go back and see which nodes really need the interpretter.
+Hint: only the ones that are going to manipulate the program pointer,
+not the ones that are just using operands.
+OR, rethink the collaboration. Currently everyone needs the interpretter,
+but it would be nicer if only those needing to modiy the program pointer did.
+
+PALOperand.resolveDest should really be resolveLocation
+
+Should the interpretter be offering storeValue? I'm not sure.
+
+The operand should be offering to store in itself.
+
+command act
+    alloc     : 'alloc' INT ;
+    add       : 'add' operand operand ;
+    branch    : operator operand operand operand;
+    div       : 'div' operand operand ;
+    end       : 'end' INT ;
+    jump      : 'jump' operand;
+    multiply  : 'mult' operand operand ;
+    prompt    : 'prompt' STRING ;
+    print     : 'prt' operand+ ;
+    move      : 'move' operand operand ;
+    subtract  : 'subt' operand operand ;
+    take      : 'take' operand ;
+shower    : 'shower' ;
+    gosub     : 'gosub' operand ;
+    return    : 'ret' ;

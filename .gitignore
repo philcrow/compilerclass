@@ -1,0 +1,10 @@
+a.out
+lex.yy.c
+*.pdf
+*.runnable
+.*.swp
+*.class
+build
+.gradle
+litter
+litter2

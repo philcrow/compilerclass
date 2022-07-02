@@ -1,0 +1,28 @@
+i:      alloc       1
+score:  alloc       1
+max:    alloc       1
+tmp:    alloc       1
+scores: alloc       5
+
+        move        &scores     score
+        move        0.0         max
+        move        0.0         i
+input:  brge        i           5.0         proc
+        take        @score
+        add         1.0         i
+        brlt        @score      max         next
+        move        @score      max
+next:   add         1.0         score
+        jump        input
+
+proc:   move        &scores     score
+        move        0.0         i
+        prompt      "num scaled_score"
+output: brge        i           5.0         done
+        move        @score+     tmp
+        div         max         tmp
+        prt         i           tmp
+        add         1.0         i
+        jump        output
+
+done:   end         0

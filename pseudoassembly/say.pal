@@ -1,0 +1,4 @@
+pointerholder: alloc 1
+reg: alloc 1
+prompt "Hello"
+add @+pointerholder reg

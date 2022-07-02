@@ -1,0 +1,21 @@
+n:      alloc   1
+t:      alloc   1
+b:      alloc   1
+
+        prompt  "Enter and integer n, I'll find n! ->"
+        take    n
+        move    n       t
+        move    1.0     b
+        gosub   rout
+
+fine:   prompt  "The factorial of "
+        prt     t
+        prompt  "is "
+        prt     b
+        end     0
+
+rout:   brle    n       1.0   base
+        mult    n       b
+        subt    1.0     n
+        gosub   rout
+base:   ret

@@ -1,0 +1,12 @@
+hrs:        alloc   1
+rate:       alloc   1
+
+            prompt  "Enter hours worked -> "
+            take    hrs
+            prompt  "Enter hourly rate -> "
+            take    rate
+            move    hrs     pay
+            mult    rate    pay
+finish:     prompt  "Your pay is "
+            prt     pay
+            end     0
