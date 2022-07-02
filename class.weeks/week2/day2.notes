@@ -1,5 +1,5 @@
 Review student work.
-4:49
+
 Advance the grammar to a little language.
 Borrowed from The Definitive ANTLR4 Reference, by Terence Parr
 who wrote the antlr tool.
@@ -321,16 +321,19 @@ precedence over addition (otherwise the answer would be 14).
 
 Exercises
 
-1. Remove the calculations from EvalVisitor.java. In their place
-   emit the expressions in postfix notation with one item per line
-   ready for the dc unix calculator. End the output with a p to pop
-   the stack and print the result.
+1. Make a new visitor with the same structure as EvalVisitor.java.
+   But, change the generic type to String (was Integer). Instead of
+   calculating, each method should return its output in postfix
+   notation with one item per line ready for the dc unix calculator.
+   In visitPrintExpr print the results from the children and
+   end the output with a p to pop the stack and print the result.
    So 3 + 2 becomes
    3
    2
    +
    p
-   Alternatively, omit the p and send to a python stack machine:
+   Alternatively, if your system does not have dc, omit the p and send
+   to a python stack machine:
    ~/training/college.courses/compilers/stackmachine/machine.py
 
 2. Convert Expr.g4 to do floating point Math. You will need to
@@ -343,3 +346,4 @@ Exercises
    Choose from these or find your own.
    JSON (see json.org)
    Inform 6
+   Make a grammar, see the AST from ANTLR.
