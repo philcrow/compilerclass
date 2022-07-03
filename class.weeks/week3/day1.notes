@@ -1,132 +1,107 @@
-Review Student Work
+Emitting Take One
 
-Switching Gears (and Tools)
+Exercise 1 asks for a new tree visitor using String as the generic type.
+This allows the top level visitPrintExpr method to emit the program
+in postfix notation ready for the dc unix tool.
 
-ANTLR4 is just one of a big family of compiler front end tools.
-These have been developed for a long time. In the 70s there was
-a cheeky entrant called Yet Another Compiler Compiler (yacc).
-It won for awhile. GNU re-implemented it and called theirs bison (think yak).
-The companions for these were lex (for yacc) and flex (for bison).
-
-Over time these have gained cousins. One of those is jflex where
-j stands for java.
-
-The main body of a lex file is a set of rules. Each rule begins
-with a regular expression and ends with a code block to execute if
-it wins. You pick which lex cousin to use based primarily on the
-language you like to code in.
-
-My Introduction
-
-When I was a student, I was writing numerical methods software.
-There were complex forumulas. I doubted my typing. I wanted to
-see the formulas more or less like they would appear in a book.
-A friend named Jon Senning suggested using the original lex to produce roff
-output. That can typeset with one of the roff tools (groff being the
-current favorite). You can do that same to make LaTeX output.
-I bought the lex and yacc book from O'Reilly and it worked. I used lex several
-more times over the years.
-
-    To extract the data from a human readable report so I could plot it.
-    To translate the documents of a help system from rtf to html.
-
-For tasks like this, you can just use a lex tool directly.
-
-See pod/jflex...
-
-Example POD to HTML
-
-There is a commenting style understood in Perl called
-Plain Old Documentation (POD).
-
-You can use it in a program or in a file by itself. It is a kind of
-markdown lanugage that looks like this:
-
-    =head1 Introduction to Text Processing and Compiling
-
-    =head2 by Phil Crow
-
-    =head2 INTRODUCTION
-
-    This is a course about text processing. Compiling is just one famous
-    example. Everything starts with something people can read and write
-    directly in a text editor. The ending point could be assembly language
-    code, bytecodes for a virtual machine, a viewable output file in PDF or png
-    format, or translation from one human readable language to another.
-
-Commands start with an = at the margin. Here I showed only two commands
-for headings.
-
-There are already tools to render this in nice ways. But, let's use it
-as an example of direct lexing translatation. The idea is that most of
-the contenct can go directly to the output. Some of it needs to be
-recognized and modified on the way out.
-
-    %%
-    %class Lexer
-    %standalone
-
-    Head1 = "=head1" .*
-
-    %%
-    {Head1} {
-        System.out.print("<h1>" + yytext().substring(6).trim() + "</h1>" );
+    import java.util.HashMap;
+    import java.util.Map;
+    
+    public class DcEmitter extends ExprBaseVisitor<String> {
+        // symbol table
+        Map<String, String> symbolTable = new HashMap<>();
+    
+        @Override
+        public String visitPrintExpr(ExprParser.PrintExprContext ctx) {
+            String value = visit(ctx.expr());
+            System.out.println(value + "p");
+            return "";
+        }
+    
+        @Override
+        public String visitAssign(ExprParser.AssignContext ctx) {
+            String id = ctx.ID().getText(); // get the variable name
+            String value = visit(ctx.expr()).trim();  // walk the expression subtree for value
+    
+            symbolTable.put(id, value);     // store the variable in the symbol table
+            return "";
+        }
+    
+        @Override
+        public String visitInt(ExprParser.IntContext ctx) {
+            return ctx.INT().getText() + "\n";
+        }
+    
+        @Override
+        public String visitId(ExprParser.IdContext ctx) {
+            String id = ctx.ID().getText();
+    
+            if (symbolTable.containsKey(id)) {
+                return symbolTable.get(id) + "\n";
+            }
+            else {
+                System.err.println( "undefined symbol: " + id + " using 0");
+                return "";
+            }
+        }
+    
+        @Override
+        public String visitMulDiv(ExprParser.MulDivContext ctx) {
+            String left = visit(ctx.expr(0));
+            String right = visit(ctx.expr(1));
+    
+            if (ctx.op.getType() == ExprParser.MUL) {
+                return left + right + "*\n";
+            }
+            else {
+                return left + right + "/\n";
+            }
+        }
+    
+        @Override
+        public String visitAddSub(ExprParser.AddSubContext ctx) {
+            String left = visit(ctx.expr(0));
+            String right = visit(ctx.expr(1));
+    
+            if (ctx.op.getType() == ExprParser.ADD) {
+                return left + right + "+\n";
+            }
+            else {
+                return left + right + "-\n";
+            }
+        }
+    
+        @Override
+        public String visitParens(ExprParser.ParensContext ctx) {
+            return visit(ctx.expr());
+        }
     }
 
-Files for lex tools use sections separated by two percents. The tools
-differ a bit in exactly what goes in each section and how to note that.
+All of the methods have the same signatures, but they return String now.
+From the bottom, visitParens is otherwise unchanged.
 
-Here, we don't need the first section at all, so we start with %%.
-In the second section, we specify a Java class name for our generated output.
-Then include the standalone directive so that class has a main and
-will run by itself. We need to say that because the default is to pair
-the lexer with a parser from a tool from the yacc family (like jyacc).
+In visitAddSub, we collect the children's output, use the same if to pick
+between ADD and SUBtract. But the output is just the concatenation of child
+output with the addition of the operator. This is the meaning of postfix:
+the operands come first, then the operator. We see a similar change in
+visitMulDiv.
 
-Then there are regular expression definitions. I started with one for
-head1. The regex is made in pieces. Literals go in double quotes.
-Dot (.) matches anything except newline. This is a common shorthand for
-a negated character class containing only newline. Star (*) is the
-optional by repeatable operator.
+For visitId we still retreive the name of the ID as before. But, now the symbol
+table itself stores the values as Strings. All we need to return is that value
+with a newline.
 
-In the next section (and the last one we need) we list rules. Each
-starts with a regular expression followed by a block of Java code.
-There are special methods available in that block, including yytext.
-The rest of this code is just regular Java.
+Similarly, visitInt asks for the INT token, but this time uses it directly
+as a String instead of converting it to a number. It too remembers to add
+a newline.
 
-Finally, in a lex tool all text not matched by a rule is simply emitted
-to standard output as received. This makes it ideal for this kind of
-markup translator. You only have to account for the markup commands,
-the rest can just flow without mention.
+In visitAssign, we need to be careful with whitespace. When we visit the
+expression child, it will give us a string with a newline on the end.
+We don't want that in the symbol table, so we trim it. Otherwise, we
+use the value as presented. That could be as set of lines. We just don't want
+the trailing newline.
 
-To build and run the lexer we execute
-
-    jflex pod.l
-    javac Lexer.java
-    java Lexer sample.pod
-
-That produces
-
-    <h1>Introduction to Text Processing and Compiling</h1>
-
-    =head2 by Phil Crow
-    ...
-
-We only have a rule for =head1, so that is the only thing modified.
-
-Exercises
-
-1. There is a common format for README files called markdown. Github and Gitlab
-(among others) use this format. You can see the basics by visiting one
-of these pages:
-
-    https://www.markdownguide.org/basic-syntax/
-    https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet
-
-Make a jflex lexer that understands h1, h2, ... heading tags.
-Continue to expand it as long as it is fun.
-
-2. Repeat my original project. Given a formula in Java, typeset that
-with LaTeX or groff. Try it with this example:
-
-    xp = (f(x + h) + f(x - h))/(2*h)
-
+Finally, at the top visitPrintExpr simply prints what the children have
+returned with a literal p and a final newline (using println). The dc tool
+uses p to mean pop the stack and print. When a calculation is finished,
+the result will be on the top of the stack. If you don't pop and print,
+you just won't be able to see it sitting there.
