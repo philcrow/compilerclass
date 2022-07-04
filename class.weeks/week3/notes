@@ -1,0 +1,532 @@
+Review Student Work
+
+Emitting Take One (My solution to exercise 1)
+
+Exercise 1 asks for a new tree visitor using String as the generic type.
+This allows the top level visitPrintExpr method to emit the program
+in postfix notation ready for the dc unix tool.
+
+    import java.util.HashMap;
+    import java.util.Map;
+    
+    public class DcEmitter extends ExprBaseVisitor<String> {
+        // symbol table
+        Map<String, String> symbolTable = new HashMap<>();
+    
+        @Override
+        public String visitPrintExpr(ExprParser.PrintExprContext ctx) {
+            String value = visit(ctx.expr());
+            System.out.println(value + "p");
+            return "";
+        }
+    
+        @Override
+        public String visitAssign(ExprParser.AssignContext ctx) {
+            String id = ctx.ID().getText(); // get the variable name
+            String value = visit(ctx.expr()).trim();  // walk the expression subtree for value
+    
+            symbolTable.put(id, value);     // store the variable in the symbol table
+            return "";
+        }
+    
+        @Override
+        public String visitInt(ExprParser.IntContext ctx) {
+            return ctx.INT().getText() + "\n";
+        }
+    
+        @Override
+        public String visitId(ExprParser.IdContext ctx) {
+            String id = ctx.ID().getText();
+    
+            if (symbolTable.containsKey(id)) {
+                return symbolTable.get(id) + "\n";
+            }
+            else {
+                System.err.println( "undefined symbol: " + id + " using 0");
+                return "";
+            }
+        }
+    
+        @Override
+        public String visitMulDiv(ExprParser.MulDivContext ctx) {
+            String left = visit(ctx.expr(0));
+            String right = visit(ctx.expr(1));
+    
+            if (ctx.op.getType() == ExprParser.MUL) {
+                return left + right + "*\n";
+            }
+            else {
+                return left + right + "/\n";
+            }
+        }
+    
+        @Override
+        public String visitAddSub(ExprParser.AddSubContext ctx) {
+            String left = visit(ctx.expr(0));
+            String right = visit(ctx.expr(1));
+    
+            if (ctx.op.getType() == ExprParser.ADD) {
+                return left + right + "+\n";
+            }
+            else {
+                return left + right + "-\n";
+            }
+        }
+    
+        @Override
+        public String visitParens(ExprParser.ParensContext ctx) {
+            return visit(ctx.expr());
+        }
+    }
+
+All of the methods have the same signatures, but they return String now.
+From the bottom, visitParens is otherwise unchanged.
+
+In visitAddSub, we collect the children's output, use the same if to pick
+between ADD and SUBtract. But the output is just the concatenation of child
+output with the addition of the operator. This is the meaning of postfix:
+the operands come first, then the operator. We see a similar change in
+visitMulDiv.
+
+For visitId we still retreive the name of the ID as before. But, now the symbol
+table itself stores the values as Strings. All we need to return is that value
+with a newline.
+
+Similarly, visitInt asks for the INT token, but this time uses it directly
+as a String instead of converting it to a number. It too remembers to add
+a newline.
+
+In visitAssign, we need to be careful with whitespace. When we visit the
+expression child, it will give us a string with a newline on the end.
+We don't want that in the symbol table, so we trim it. Otherwise, we
+use the value as presented. That could be as set of lines. We just don't want
+the trailing newline.
+
+Finally, at the top visitPrintExpr simply prints what the children have
+returned with a literal p and a final newline (using println). The dc tool
+uses p to mean pop the stack and print. When a calculation is finished,
+the result will be on the top of the stack. If you don't pop and print,
+you just won't be able to see it sitting there.
+
+From Abstract Syntax Tree to a Decorated Parse Tree
+
+The tree that ANTLR4 builds for us to walk is an expression of the grammar's
+understanding of our source program. For simple languages, we can use
+that directly. As things get more complicated, we need something more.
+
+The post-parsing problems we need to eventually solve include: type checking
+(Is it really legal to use that variable or literal in that expression?),
+memory allocation (Where will this value live in the target language memory?)
+forward references (Where is the method the constructor just called?), and others.
+
+A lot of this is about meaning. Many sentences that are grammatically correct
+don't actually make sense. "John ran home," is fine, but "John ran church,"
+doesn't quite make sense, even though it has the same grammatical structure. 
+Noticing errors like this in source languages is called semantic analysis.
+For that we build a new tree (or directed graph) called an annotated parse
+tree, also known as a decorated parse tree.
+
+We record extra information in the decorated tree to enforce semantic rules.
+
+We also need to think about the target language. So, our decorated tree needs
+to have enough information to aid code generation for the language we have in
+mind. Traditionally, that language is assembly of some kind, either the real
+thing or a byte code machine like the JVM.
+
+Finally, we want to deliver quality errors messages at every stage.
+We need to record source code line numbers in the tree, so that we
+can print them when an exception occurs.
+
+We are not going to do all of this at once. We will start small and build.
+This is not just a strategy for college courses. In the work place we want
+to build incrementally so we can: (1) see progress, (2) verify that we
+are doing the right thing for our users, (3) build only what is needed,
+(4) keep out sanity by not making things too complex all at once.
+
+We saw the starting point for this decorated tree when we made the emitter for dc.
+From the ANTLR4 parse tree, each visit method returns an object. For dc, we simply
+re-emitted the tokens from our source language (after recording and discarding
+assignment statements and later replacing variables with those values).
+Where we returned String, we need to return a TreeNode that can become part of
+a decorated parse tree. This will have room for flow of control (like if and while)
+and for memory management (like arrays and record structures like object instances).
+
+While a decorated parse tree is essential for emitting code in a target language,
+it is also the key to interpretting the language. In my career I have only
+emitted target code as an exercise, but I have written interpretters for production use.
+Therefore, I want to start by building a tree that lets us interpret the language.
+This is actually a hybrid approach. Truly interpretted languages (like bash or
+another command line shell) don't look ahead. They simply run the commands as they
+see them. Our interpretter is more robust, because the whole program is built
+into the decorated tree. Eventually that allows us to do things like run
+routines (methods, functions, etc.) which are defined later in the source file.
+
+Housekeeping
+
+Make a directory called 'app' for the work. In it put this build.gradle
+
+    plugins {
+        id 'antlr'
+    }
+    
+    repositories {
+        mavenCentral();
+    }
+    
+    dependencies {
+        antlr "org.antlr:antlr4:4.10.1"
+    }
+    
+    generateGrammarSource {
+        arguments += ["-visitor", "-no-listener", "-long-messages"]
+    }
+    
+    jar {
+        manifest {
+            attributes "Main-Class": "Runner"
+        }
+        from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        }
+    }
+
+We can use this exactly as is for any ANTLR4 project that will use the visitor pattern.
+If you want to use the listener pattern instead, simply remove '-visitor' and '-no-listener'
+from the generateGrammarSource arguments list.
+
+Now make directories for the code.
+
+    app
+    └── src
+        └── main
+            ├── antlr
+            └── java
+
+Grammar files for ANTLR4 will go in src/main/antlr. Our code will go in src/main/java.
+Then we can build and run with
+
+    gradle build
+    java -jar build/libs/app.jar exprprogram
+
+where exprprogram is a program in our expression language, perhaps this one:
+
+    x = 4
+    print 3 + x * 2
+
+There is a change to the grammar. Instead of allowing a bare expression as a statement,
+there will be only two real statemetns: assignment and a new one called print.
+
+    grammar Expr;
+    import CommonLexerRules;
+    
+    program : statement+ ;
+    
+    statement : 'print' expr NEWLINE    # printExpr
+              | ID '=' expr NEWLINE     # assign
+              | NEWLINE                 # blank
+              ;
+    
+    expr : expr op=(MUL|DIV) expr       # MulDiv
+         | expr op=(ADD|SUB) expr       # AddSub
+         | INT                          # int
+         | ID                           # id
+         | '(' expr ')'                 # parens
+         ;
+
+The runner shows how our new scheme works in outline:
+
+    import org.antlr.v4.runtime.*;
+    import org.antlr.v4.runtime.tree.*;
+    
+    // Visitor approach
+    public class Runner {
+        public static void main(String[] args) throws Exception {
+            // As before with only name changes.
+            CharStream        input  = CharStreams.fromFileName(args[0]);
+            ExprLexer         lexer  = new ExprLexer(input);
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            ExprParser        parser = new ExprParser(tokens);
+            ParseTree         tree   = parser.program();
+    
+            // Our custom code
+            EvalVisitor eval = new EvalVisitor();
+            Node program = eval.visit(tree);
+            program.act();
+        }
+    }
+
+Everything above 'Our custom code' is as before. The differences begine with the call
+to visit. Now we are collecting the results in a variable called program which has type Node.
+Our Nodes will have an act method that runs them.
+
+We need roughly one node type for each production in the grammar. I actually chose to create
+additional node types for each operation so addition, subtraction, multiplication and division
+don't have to share. But, parentheses and blank lines don't need nodes, so we can skip those.
+
+That's a lot of little classes. All of them inherit from an abstract
+base class with the visit methods will return.
+
+    public abstract class Node {
+        /**
+         * For statements to perform their behavior.
+         */
+        public abstract void act();
+    
+        /**
+         * For expr nodes to compute their value, operations will recursively ask
+         * children for values and combine them.
+         * @return the value of an extpression
+         */
+        public abstract Integer getIntValue();
+    }
+
+Leaf Nodes
+
+The concrete classes have to keep track of their children. The leaves are INT and ID.
+
+    public class IntNode extends Node {
+        Integer value;
+    
+        public IntNode(Integer value) {
+            this.value = value;
+        }
+    
+        @Override
+        public void act() {
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return value;
+        }
+    }
+
+Only the actual statements have meaninful act methods. The others are all about doing
+the calculations. Each Node will have a toString for debugging (not shown). Most will do their
+calculation when getIntValue is called. Here that just returns the value in the literal.
+
+    public class IdNode extends Node {
+        String symbol;
+        EvalVisitor visitor;
+    
+        public IdNode(String symbol, EvalVisitor visitor) {
+            this.symbol = symbol;
+            this.visitor = visitor;
+        }
+    
+        @Override
+        public void act() {
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return visitor.resolve(symbol);
+        }
+    }
+
+Some nodes need the interpretter to help them. In particular, an ID lookup needs
+access to the symbol table. The node only records the name of the symbol and
+keeps a visitor handy, so it can call resolve. The symbol table is just like it was
+when we calculated instead of building a Node tree for interpretation:
+
+    Map<String, Integer> symbolTable;
+
+The helpers for that are in EvalVisitor:
+
+    public Integer resolve(String symbol) {
+        return symbolTable.get(symbol);
+    }
+
+    public void set(String symbol, Integer newValue) {
+        symbolTable.put(symbol, newValue);
+    }
+
+Expressions with Children
+
+The actual calculations are handled by the arithemetic nodes. Here is one example:
+
+    public class AddNode extends Node {
+        Node left;
+        Node right;
+    
+        public AddNode(Node left, Node right) {
+            this.left = left;
+            this.right = right;
+        }
+    
+        @Override
+        public void act() {
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return left.getIntValue() + right.getIntValue();
+        }
+    }
+
+Its children are expression Nodes called left and right. Again, there is no act to do here.
+In getIntValue we just add together whatever the children deliver from their own getIntValue
+methods. This is recursive. The children can be arbitrary trees of Nodes. The other arithmetic
+is similar.
+
+Statements
+
+There are two statements: print and assignment. Both need to evaluate their child expressions
+by calling getIntValue on those Nodes. The difference is in what they do with the result.
+
+    public class AssignNode extends Node {
+        String symbol;
+        Node valueNode;
+        EvalVisitor visitor;
+    
+        public AssignNode(String symbol, Node valueNode, EvalVisitor visitor) {
+            this.symbol = symbol;
+            this.valueNode = valueNode;
+            this.visitor = visitor;
+        }
+    
+        @Override
+        public void act() {
+            Integer newValue = getIntValue();
+            visitor.set(symbol, newValue);
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return valueNode.getIntValue();
+        }
+    }
+
+Assign keeps the symbol as a String. The expression is a Node (really a tree). This one
+needs the EvalVisitor in order to update the symbol table it owns. Here we finally see
+an act that does something. It first finds the value of the expression Node. Then it
+asks the visitor to put that into the symbol table under the correct name.
+
+    public class PrintNode extends Node {
+        Node valueNode;
+    
+        public PrintNode(Node valueNode) {
+            this.valueNode = valueNode;
+        }
+    
+        @Override
+        public void act() {
+            Integer newValue = getIntValue();
+            System.out.println(newValue);
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return valueNode.getIntValue();
+        }
+    }
+
+For print, we do that same calculation as for assign, but instead of storing the
+value we show it to the user on standard out.
+
+Finally, there is a node to collect all the statements into a program.
+
+    import java.util.List;
+    
+    public class ProgramNode extends Node {
+        List<Node> statements;
+    
+        public ProgramNode(List<Node> statements) {
+            this.statements = statements;
+        }
+    
+        @Override
+        public void act() {
+            for (Node statement : statements) {
+                statement.act();
+            }
+        }
+    }
+
+I have omitted toString and getIntValue. The former is not interesting. The latter is not used.
+When a ProgramNode is created, it receives a list of statements which the constructor stores.
+To act, we simply loop through the statements calling act.
+
+Interpretting
+
+Now the EvalVisitor has specific type Node (instead of String). Its only attribute is
+the symbol table. I showed the helpers for the table above. Let's look at a few visit methods.
+The visitParens method is unchanged, except for the return type.
+
+    @Override
+    public Node visitAddSub(ExprParser.AddSubContext ctx) {
+        Node left = visit(ctx.expr(0));
+        Node right = visit(ctx.expr(1));
+
+        if (ctx.op.getType() == ExprParser.ADD) {
+            return new AddNode(left, right);
+        }
+        else {
+            return new SubtractNode(left, right);
+        }
+    }
+
+During this visit walk, we are no longer running the code. We are building an internal
+representation of it so we can interpret it later.
+
+After collecting the left and right children as Nodes, we again decide which operation
+this is (remember these are combined in the grammar so they have the same precedence).
+Once we know the opearation, we can make the correct Node type and return that.
+
+These return values are delivered to the parent when it calls visit on the AddSub child.
+
+The visitMulDiv method is similar.
+
+    @Override
+    public Node visitInt(ExprParser.IntContext ctx) {
+        Integer value = Integer.parseInt(ctx.INT().getText());
+        return new IntNode(value);
+    }
+
+To record a literal integer, we gather it from the parser and store it in a new IntNode which
+we return to our parent.
+
+    @Override
+    public Node visitId(ExprParser.IdContext ctx) {
+        String id = ctx.ID().getText();
+        return new IdNode(id, this);
+    }
+
+Similarly, for an ID we record the symbol name in an IdNode returned to the parent.
+
+    @Override
+    public Node visitAssign(ExprParser.AssignContext ctx) {
+        String id = ctx.ID().getText();
+        Node valueNode = visit(ctx.expr());
+
+        return new AssignNode(id, valueNode, this);
+    }
+
+This is one of the statements, which is a parent of an expr. The ID is the symbol.
+The expression that will yield the value at run-time is embodied in the Node returned
+by visiting the expr child. Those are put into an AssignNode returned to the parent.
+
+    @Override
+    public Node visitPrintExpr(ExprParser.PrintExprContext ctx) {
+        Node value = visit(ctx.expr());
+
+        return new PrintNode(value);
+    }
+
+A PrintNode only needs to know what expression Node to ask for a value.
+
+Finally, we reach the top of the tree.
+
+    @Override public Node visitProgram(ExprParser.ProgramContext ctx) {
+        List<Node> statements = new ArrayList<>();
+        for (ExprParser.StatementContext statement : ctx.statement()) {
+            statements.add(visit(statement));
+        }
+        return new ProgramNode(statements);
+    }
+
+One of our programs is a list of statements from the input file. Each is either
+a print statement or an assignment. We loop over the list of statements found
+by the parser. For each one we add whatever the child's visit method returns
+to the statements list. These will either be PrintNode or AssignNode objects.
+Our ProgramNode records this list of statements.

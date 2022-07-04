@@ -4,12 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class EvalVisitor extends ExprBaseVisitor<Node> {
-    ProgramNode program;
-    Map<String, Integer> symbolTable;
-
-    public EvalVisitor() {
-        symbolTable = new HashMap<>();
-    }
+    Map<String, Integer> symbolTable = new HashMap<>();
 
     // Helpers
 
