@@ -64,6 +64,14 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         return new IfNode(conditional, thenBlock, elseBlock);
     }
 
+    @Override
+    public Node visitWhileStatement(ExprParser.WhileStatementContext ctx) {
+        Node conditional = visit(ctx.conditional());
+        Node block = visit(ctx.block());
+
+        return new WhileNode(conditional, block);
+    }
+
     // Primatives
 
     @Override
@@ -113,7 +121,7 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
 
     @Override
     public Node visitConditional(ExprParser.ConditionalContext ctx) {
-        String comparitor = ctx.compare.toString();
+        String comparitor = ctx.compare.getText();
         Node left = visit(ctx.expr(0));
         Node right = visit(ctx.expr(1));
 

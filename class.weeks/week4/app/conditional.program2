@@ -1,0 +1,12 @@
+hrs = 39
+rate = 10
+pay = 0
+
+if (hrs < 40) {
+    pay = hrs * rate
+}
+else {
+    pay = 40 * rate + (hrs - 40) * rate * 3 / 2
+}
+
+print pay
