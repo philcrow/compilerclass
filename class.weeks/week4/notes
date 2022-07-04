@@ -1,0 +1,353 @@
+Adding Flow of Control
+
+Here are the things that languages routinely support that we haven't
+put in ours yet.
+
+    * flow of control
+    * floating point Math
+    * arrays
+    * dynamic memory allocation (for records or objects)
+
+Let's add flow of control. There are a lot structures in a modern
+language for this: for (counted like C and working over iterables),
+while (a pretested loop), do/while (a posttested loop), switch (or
+the very fancy given/when of raku), and of course if/else.
+
+Adding Conditionals to the Grammar
+
+We'll stick to if with a single optional else and while. Feel free
+to expand to others.
+
+At core, both if and while have a condition. So we need that first.
+
+    conditional : expr compare=COMPARISON expr ;
+
+This is not too bad. An expression on the left is compared to the one
+on the right with a comparison operator.
+
+    COMPARISON : '==' | '!=' | '<' | '>' | '<=' | '>=' ;
+
+These are the usual suspects.
+
+With those definitions, we can create the structure of the if and while.
+
+    statement : 'print' expr NEWLINE                    # printExpr
+              | ID '=' expr NEWLINE                     # assign
+              | 'if' '(' conditional ')' block else?    # ifStatement
+              | 'while' '(' conditional ')' block       # whileStatement
+              | NEWLINE                                 # blank
+              ;
+
+So, these are new statements added to our grammar. They have the usual
+keywords: if and while. We require parentheses around the conditional.
+For while, we have a single block of statements. For if, we have that
+for when the condition is true and an optional else when it isn't.
+
+    else : 'else' block ;
+
+Else is just the usual keyword and a block. Remember that the question mark
+in the ifStatement production makes this optional.
+
+All that remains is to define the block.
+
+    block : '{' statement* '}' NEWLINE? ;
+
+To accomodate different styles, we don't require newlines after blocks.
+This allows
+
+    if (x < 4) {
+        print x
+    } else {
+        print y
+    }
+
+Some people prefer that cuddling. You cannot write this all on a line,
+because print statements require a new line. Without the braces we would
+have to start caring a lot about white space at the beginning of the line.
+
+All together we have these grammar pieces. First, the common lexing tokens.
+
+    lexer grammar CommonLexerRules;
+
+    ID : [a-zA-Z]+ ;
+    INT : '-'? [0-9]+ ;
+    COMPARISON : '==' | '!=' | '<' | '>' | '<=' | '>=' ;
+    NEWLINE : '\r'? '\n' ;
+    WS : [ \t] -> skip ;
+    
+    MUL : '*' ;
+    DIV : '/' ;
+    ADD : '+' ;
+    SUB : '-' ;
+
+Then the language grammar.
+
+    grammar Expr;
+    import CommonLexerRules;
+    
+    program : statement+ ;
+    
+    statement : 'print' expr NEWLINE                    # printExpr
+              | ID '=' expr NEWLINE                     # assign
+              | 'if' '(' conditional ')' block else?    # ifStatement
+              | 'while' '(' conditional ')' block       # whileStatement
+              | NEWLINE                                 # blank
+              ;
+    
+    conditional : expr compare=COMPARISON expr ;
+    
+    else : 'else' block ;
+    
+    block : '{' statement* '}' NEWLINE? ;
+    
+    expr : expr op=(MUL|DIV) expr       # MulDiv
+         | expr op=(ADD|SUB) expr       # AddSub
+         | INT                          # int
+         | ID                           # id
+         | '(' expr ')'                 # parens
+         ;
+
+Not all that much has changed.
+
+New Nodes
+
+We need three new nodes and a bit of restructuring to do. The new nodes are
+IfNode, WhileNode, and ConditionalNode.
+
+The first bit of restructuring is to add a new abstract method to
+Node.java:
+
+    public abstract boolean getBooleanValue();
+
+Most of the classes don't need that, but they will all have to have one.
+It won't matter what it returns for things like AddNode, etc. But, the
+conditional will use it. This is a feature of a decorated tree: functionality
+everyone shares even if they don't need it.
+
+    public class IfNode extends Node {
+        Node conditional;
+        Node thenBlock;
+        Node elseBlock;
+    
+        public IfNode(Node conditional, Node thenBlock, Node elseBlock) {
+            this.conditional = conditional;
+            this.thenBlock = thenBlock;
+            this.elseBlock = elseBlock;
+        }
+    
+        @Override
+        public void act() {
+            if (getBooleanValue()) {
+                thenBlock.act();
+            }
+            else if (elseBlock != null) {
+                elseBlock.act();
+            }
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return conditional.getIntValue();
+        }
+    
+        @Override
+        public boolean getBooleanValue() {
+            return conditional.getBooleanValue();
+        }
+    }
+
+An if node needs the condition and the blocks to execute based on whether
+it is true or false. The else block is optional, so we need to guard against
+running one we don't have (see else if elseBlock != null in act).
+
+The ConditionalNode will have the important getBooleanValue, so the one
+here can just call that. If the condition holds, we ask the then block
+to act. Otherwise, if we have an else block, we ask it to act.
+
+The WhileNode is similar, but works like an if with repeated calls to
+the block, which is responsible for updating something that will allow
+the loop to end (unless an infinite loop is desired).
+
+    public class WhileNode extends Node {
+        Node conditional;
+        Node block;
+    
+        public WhileNode(Node conditional, Node block) {
+            this.conditional = conditional;
+            this.block = block;
+        }
+    
+        @Override
+        public void act() {
+            while (getBooleanValue()) {
+                block.act();
+            }
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return conditional.getIntValue();
+        }
+    
+        @Override
+        public boolean getBooleanValue() {
+            return conditional.getBooleanValue();
+        }
+    }
+
+The evaluation of the condition is left to ConditionalNode.
+
+    public class ConditionalNode extends Node {
+        Node left;
+        String comparitor;
+        Node right;
+    
+        public ConditionalNode(Node left, String comparitor, Node right) {
+            this.left = left;
+            this.comparitor = comparitor;
+            this.right = right;
+        }
+    
+        @Override
+        public void act() {
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return getBooleanValue() ? 1 : 0;
+        }
+    
+        @Override
+        public boolean getBooleanValue() {
+            Integer leftValue = left.getIntValue();
+            Integer rightValue = right.getIntValue();
+    
+            switch (comparitor) {
+                case "==" :
+                    return leftValue == rightValue;
+                case "!=" :
+                    return leftValue != rightValue;
+                case "<" :
+                    return leftValue < rightValue;
+                case ">" :
+                    return leftValue > rightValue;
+                case "<=" :
+                    return leftValue <= rightValue;
+                case ">=" :
+                    return leftValue >= rightValue;
+            }
+            return false; // unreachable, parser would have caught illegal comparitor
+        }
+    }
+
+A conditional node needs a left node, a right node and the comparison
+operator, which we use directly as a String in a switch. Note that there
+is no need for a default here. The final return is only needed because
+Java insists on it, it cannot be reached. ANTLR4 will make sure we have a valid
+comparitor from this list of options. We simply return the result
+of comparing the two sides.
+
+A Block is a Program
+
+When you see a new non-terminal in a grammar, it is natural to think you
+will need a node in the decorated parse tree for it. But, looking closely
+we see that blocks are just little programs (which can optionally have
+not statements). Thus with a bit of refactoring, we can re-use the ProgramNode.
+
+    private Node buildProgramNode(List<ExprParser.StatementContext> parserStatements) {
+        List<Node> programStatements = new ArrayList<>();
+        for (ExprParser.StatementContext statement : parserStatements) {
+            Node programStatement = visit(statement);
+            if (programStatement != null) {
+                programStatements.add(programStatement);
+            }
+        }
+        return new ProgramNode(programStatements);
+    }
+
+First, factor our the actual work of making a ProgramNode from the
+visitProgram method, so we can call it again from visitBlock.
+Then, make that call instead of doing that work:
+
+    @Override
+    public Node visitProgram(ExprParser.ProgramContext ctx) {
+        return buildProgramNode(ctx.statement());
+    }
+
+Now we need a few new visit methods, starting with the one that
+re-uses this code:
+
+    @Override
+    public Node visitBlock(ExprParser.BlockContext ctx) {
+        return buildProgramNode(ctx.statement());
+    }
+
+If we have an else, we will collect its block by visiting it in visitElse.
+
+    @Override
+    public Node visitElse(ExprParser.ElseContext ctx) {
+        return visit(ctx.block());
+    }
+
+A conditional needs the text of the comparison operator and the
+two expressions.
+
+    @Override
+    public Node visitConditional(ExprParser.ConditionalContext ctx) {
+        String comparitor = ctx.compare.getText();
+        Node left = visit(ctx.expr(0));
+        Node right = visit(ctx.expr(1));
+
+        return new ConditionalNode(left, comparitor, right);
+    }
+
+With those defined we can move up to the if and while statement visitors.
+
+    @Override
+    public Node visitWhileStatement(ExprParser.WhileStatementContext ctx) {
+        Node conditional = visit(ctx.conditional());
+        Node block = visit(ctx.block());
+
+        return new WhileNode(conditional, block);
+    }
+
+    @Override
+    public Node visitIfStatement(ExprParser.IfStatementContext ctx) {
+        Node conditional = visit(ctx.conditional());
+        Node thenBlock = visit(ctx.block());
+        Node elseBlock = null;
+
+        if (ctx.else_() != null) {
+            elseBlock = visit(ctx.else_());
+        }
+
+        return new IfNode(conditional, thenBlock, elseBlock);
+    }
+
+Now we can run programs like these:
+
+    hrs = 42
+    rate = 10
+    pay = 0
+    
+    if (hrs < 40) {
+        pay = hrs * rate
+    }
+    else {
+        pay = 40 * rate + (hrs - 40) * rate * 3 / 2
+    }
+    
+    print pay
+
+This figures pay with time and a half for overtime. Note that we
+cannot multiply by 1.5 because we don's support floating point math.
+
+    x = 10
+    
+    while (x > 0) {
+        print x
+        x = x - 1
+    }
+
+At the end of this we really want to print "Lift Off!", but don't have
+strings either.

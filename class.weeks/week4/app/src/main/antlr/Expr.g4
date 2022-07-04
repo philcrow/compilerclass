@@ -5,7 +5,7 @@ program : statement+ ;
 
 statement : 'print' expr NEWLINE                    # printExpr
           | ID '=' expr NEWLINE                     # assign
-          | 'if' '(' conditional ')' block else     # ifStatement
+          | 'if' '(' conditional ')' block else?    # ifStatement
           | 'while' '(' conditional ')' block       # whileStatement
           | NEWLINE                                 # blank
           ;
