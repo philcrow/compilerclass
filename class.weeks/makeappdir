@@ -1,0 +1,5 @@
+#!/bin/bash
+
+mkdir -p app/src/main/java
+mkdir app/src/main/antlr
+cp ~/githubhome/compilerclass/class.weeks/build.gradle app

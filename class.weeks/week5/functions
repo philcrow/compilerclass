@@ -1,0 +1,17 @@
+Suppose we wanted to call a function, what would that look like?
+
+Grammatically it would be a statement production.
+
+statement : ....
+          | 'function' ID (INT) block       # functionStatement
+          
+
+where ID is the function name, the INT is how many args.
+
+Then the expr rule would get a new production
+
+expr : ...
+     | 'call' ID( expr* )
+
+The FunctionNode would have its symbol and an array of Nodes for the
+args.

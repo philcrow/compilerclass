@@ -1,0 +1,103 @@
+Types
+
+Languages use types to keep track of what the various symbols refer to.
+Most languages divide their numeric types. At the machine language level
+this is because the registers where computations must take place are
+special purpose. Some handle integer Math, others floating point Math.
+In languages like C, which have a core value of limited resource use,
+there are smaller types like short or char to cram more things into
+less memory.
+
+Most of us don't need to spend time worrying about either maximizing
+memory utilization or the details of where arithemetic operations take
+place in our processors. Still, developers like to have types to keep things
+separate, safe, and mentally manageable. A typical language has primatives
+for integers, floating point numbers, and characters. Then there are
+agregated types like arrays and records. A special kind of record is
+the object. These types are really helpful in managing complexity.
+
+For our language we will keep it simple by implementing just integer
+and floating point math. We don't need to follow the lead fo C, using
+lots of integers of various sizes. But, we'll eventually need integers
+to manage arrays, floating point numbers for real calculations (without
+gymnastics like writing 1.5 as 3 / 2), and function names.
+
+To accomodate types in our language we need to augment the assign
+statement with a declaration concept. So we can have statements like these
+
+    float x
+    float y = 12.3
+    x = y * 3
+
+This is three variations. First is a bare declaration (float x). Second
+is a declaration with assignment (float y = 12.3). Third is an assignment
+to a previously declared variable. Then the types need checking so
+this becomes illegal:
+
+    int x
+    float y = 12.3
+    x = y * 3
+
+While we could automatically round the final expression to jam it into an
+int, we usually want to complain instead, thinking that the developer made
+an error.
+
+The other thing lurking here is the complexity of the literals. Before
+we had only integers. Now we need to allow the decimal point, but again
+we need to make sure that literals with decimal points will fit into the
+variable's space. We want to allow
+
+    float y = 12
+
+but not
+
+    int x = 12.3
+
+Enforcing all of this will give us a workout when we create our decorated
+tree. In our language, we will demand prior declaration. Not every language
+does that. For instance, member attributes of a Java class can be declared
+at the bottom of the class definition. We won't allow that, in part because
+I don't like it when I see it. But, forward references will be necessary
+when we introduce functions. It is a small torture to have to list functions
+before their use. (Here function really stands in for all routines:
+procedures, methods, subroutines, and the like.)
+
+Grammar Additions
+
+In CommonLexerRules add the FLOAT token
+
+    FLOAT : '-'? [0-9]+ '.' | '-'? '.' INT+ | '-'? INT+ '.' INT+ ;
+
+You could do more or less than this. These are allowed as FLOATs:
+
+    12.
+    .12
+    12.12
+    3.0
+
+All of those allow negation:
+
+    -12.
+    etc.
+
+These are not allowed as FLOATs:
+
+    3
+    12e5
+
+In Expr.g4 add the declaration statements
+
+    statement : ...
+              | type ID NEWLINE                         # declare
+              | type ID '=' expr NEWLINE                # declareAssign
+
+The original assign statment is still with us. But, now
+it will be illegal if the variable has not been declared.
+
+Finally, we need to add FLOAT as a valid expr
+
+    expr : ...
+         | FLOAT                        # float
+
+That's it for the grammar. Now we have to teach the parse tree visitor
+and interpretter about these new features.

@@ -1,0 +1,24 @@
+plugins {
+    id 'antlr'
+}
+
+repositories {
+    mavenCentral();
+}
+
+dependencies {
+    antlr "org.antlr:antlr4:4.10.1"
+}
+
+generateGrammarSource {
+    arguments += ["-visitor", "-no-listener", "-long-messages"]
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "Runner"
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
