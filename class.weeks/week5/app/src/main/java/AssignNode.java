@@ -24,8 +24,6 @@ public class AssignNode extends Node {
         else { // symbol is a float
             symbol.setFloatValue(valueNode.getFloatValue());
         }
-        Integer newValue = getIntValue();
-        visitor.setValue(name, newValue);
     }
 
     @Override

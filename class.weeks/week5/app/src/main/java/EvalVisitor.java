@@ -66,7 +66,6 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         String type = ctx.type().getText();
         String id = ctx.ID().getText();
         Node valueNode = visit(ctx.expr());
-        System.err.println( "visitDeclareAssign " + type + " " + id + " " + valueNode);
 
         declare(type, id);
         return new AssignNode(id, valueNode, this);
