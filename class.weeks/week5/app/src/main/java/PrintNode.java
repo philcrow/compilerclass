@@ -7,13 +7,27 @@ public class PrintNode extends Node {
 
     @Override
     public void act() {
-        Integer newValue = getIntValue();
-        System.out.println(newValue);
+        if (canBeInt()) {
+            System.out.println(getIntValue());
+        }
+        else {
+            System.out.println(getFloatValue());
+        }
+    }
+
+    @Override
+    public boolean canBeInt() {
+        return valueNode.canBeInt();
     }
 
     @Override
     public Integer getIntValue() {
         return valueNode.getIntValue();
+    }
+
+    @Override
+    public Double getFloatValue() {
+        return valueNode.getFloatValue();
     }
 
     @Override

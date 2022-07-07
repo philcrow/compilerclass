@@ -1,9 +1,8 @@
 public class FloatSymbol extends Symbol {
     Double value;
 
-    public FloatSymbol(String name, Double initialValue) {
-        super(name);
-        value = initialValue;
+    public FloatSymbol(String name) {
+        super(name, Symbol.SymbolType.FLOAT);
     }
 
     public Integer getIntValue() {

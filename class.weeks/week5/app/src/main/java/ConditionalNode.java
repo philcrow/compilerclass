@@ -10,12 +10,21 @@ public class ConditionalNode extends Node {
     }
 
     @Override
-    public void act() {
+    public void act() { }
+
+    @Override
+    public boolean canBeInt() {
+        return true;
     }
 
     @Override
     public Integer getIntValue() {
         return getBooleanValue() ? 1 : 0;
+    }
+
+    @Override
+    public Double getFloatValue() {
+        return Double.valueOf(getIntValue());
     }
 
     @Override

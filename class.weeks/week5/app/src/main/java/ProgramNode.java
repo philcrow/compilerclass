@@ -14,12 +14,23 @@ public class ProgramNode extends Node {
         }
     }
 
-    /**
-     * This is not meaningful.
+    /*
+     * The rest of the methods are not meaningful.
      */
+
+    @Override
+    public boolean canBeInt() {
+        return true;
+    }
+
     @Override
     public Integer getIntValue() {
         return 0;
+    }
+
+    @Override
+    public Double getFloatValue() {
+        return 0.0;
     }
 
     @Override

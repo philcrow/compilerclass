@@ -1,26 +1,27 @@
-public class IntNode extends Node {
-    Integer value;
+public class FloatNode extends Node {
+    Double value;
 
-    public IntNode(Integer value) {
+    public FloatNode(Double value) {
         this.value = value;
     }
 
     @Override
-    public void act() { }
+    public void act() {
+    }
 
     @Override
     public boolean canBeInt() {
-        return true;
+        return false;
     }
 
     @Override
     public Integer getIntValue() {
-        return value;
+        throw new RuntimeException("cannot use float as int");
     }
 
     @Override
     public Double getFloatValue() {
-        return Double.valueOf(value);
+        return value;
     }
 
     @Override

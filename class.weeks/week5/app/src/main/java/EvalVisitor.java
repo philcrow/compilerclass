@@ -51,6 +51,32 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         return new PrintNode(value);
     }
 
+    // this is a compile time only statement
+    @Override
+    public Node visitDeclare(ExprParser.DeclareContext ctx) {
+        String type = ctx.type().getText();
+        String id = ctx.ID().getText();
+
+        declare(type, id);
+        return null;
+    }
+
+    @Override
+    public Node visitDeclareAssign(ExprParser.DeclareAssignContext ctx) {
+        String type = ctx.type().getText();
+        String id = ctx.ID().getText();
+        Node valueNode = visit(ctx.expr());
+        System.err.println( "visitDeclareAssign " + type + " " + id + " " + valueNode);
+
+        declare(type, id);
+        return new AssignNode(id, valueNode, this);
+    }
+
+    private void declare(String type, String id) {
+        Symbol newSymbol = Symbol.getInstance(type, id);
+        globalSymbols.set(id, newSymbol);
+    }
+
     @Override
     public Node visitAssign(ExprParser.AssignContext ctx) {
         String id = ctx.ID().getText();
@@ -89,6 +115,12 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
     public Node visitInt(ExprParser.IntContext ctx) {
         Integer value = Integer.parseInt(ctx.INT().getText());
         return new IntNode(value);
+    }
+
+    @Override
+    public Node visitFloat(ExprParser.FloatContext ctx) {
+        Double value = Double.parseDouble(ctx.FLOAT().getText());
+        return new FloatNode(value);
     }
 
     @Override

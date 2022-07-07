@@ -15,8 +15,18 @@ public class WhileNode extends Node {
     }
 
     @Override
+    public boolean canBeInt() {
+        return conditional.canBeInt();
+    }
+
+    @Override
     public Integer getIntValue() {
         return conditional.getIntValue();
+    }
+
+    @Override
+    public Double getFloatValue() {
+        return conditional.getFloatValue();
     }
 
     @Override

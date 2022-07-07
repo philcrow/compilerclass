@@ -20,8 +20,18 @@ public class IfNode extends Node {
     }
 
     @Override
+    public boolean canBeInt() {
+        return true;
+    }
+
+    @Override
     public Integer getIntValue() {
         return conditional.getIntValue();
+    }
+
+    @Override
+    public Double getFloatValue() {
+        return Double.valueOf(conditional.getIntValue());
     }
 
     @Override

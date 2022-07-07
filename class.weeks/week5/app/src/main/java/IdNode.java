@@ -8,12 +8,29 @@ public class IdNode extends Node {
     }
 
     @Override
-    public void act() {
+    public void act() { }
+
+    @Override
+    public boolean canBeInt() {
+        Symbol symbol = visitor.resolve(name);
+        return symbol.type == Symbol.SymbolType.INT;
     }
 
     @Override
     public Integer getIntValue() {
-        return visitor.resolve(name).getIntValue();
+        Symbol symbol = visitor.resolve(name);
+        if (symbol.type == Symbol.SymbolType.INT) {
+            return symbol.getIntValue();
+        }
+        else {
+            throw new RuntimeException("Symbol " + name + " is an int not a float");
+        }
+    }
+
+    @Override
+    public Double getFloatValue() {
+        Symbol symbol = visitor.resolve(name);
+        return symbol.getFloatValue();
     }
 
     @Override

@@ -1,9 +1,8 @@
 public class IntSymbol extends Symbol {
     Integer value;
 
-    public IntSymbol(String name, Integer initialValue) {
-        super(name);
-        value = initialValue;
+    public IntSymbol(String name) {
+        super(name, Symbol.SymbolType.INT);
     }
 
     public Integer getIntValue() {
