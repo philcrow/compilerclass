@@ -6,8 +6,7 @@ public class FloatNode extends Node {
     }
 
     @Override
-    public void act() {
-    }
+    public void act() { }
 
     @Override
     public boolean canBeInt() {
@@ -26,10 +25,10 @@ public class FloatNode extends Node {
 
     @Override
     public boolean getBooleanValue() {
-        return getIntValue() != 0;
+        throw new RuntimeException("cannot use float to get to the truth");
     }
 
     public String toString() {
-        return "INT " + value;
+        return "FLOAT " + value;
     }
 }

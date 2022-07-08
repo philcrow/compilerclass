@@ -8,7 +8,7 @@ In languages like C, which have a core value of limited resource use,
 there are smaller types like short or char to cram more things into
 less memory.
 
-Most of us don't need to spend time worrying about either maximizing
+Most of us don't need to spend time worrying about either minimizing
 memory utilization or the details of where arithemetic operations take
 place in our processors. Still, developers like to have types to keep things
 separate, safe, and mentally manageable. A typical language has primatives
@@ -17,12 +17,12 @@ agregated types like arrays and records. A special kind of record is
 the object. These types are really helpful in managing complexity.
 
 For our language we will keep it simple by implementing just integer
-and floating point math. We don't need to follow the lead fo C, using
+and floating point Math. We don't need to follow the lead fo C, using
 lots of integers of various sizes. But, we'll eventually need integers
 to manage arrays, floating point numbers for real calculations (without
-gymnastics like writing 1.5 as 3 / 2), and function names.
+gymnastics like writing 1.5 as 3 / 2), and functions.
 
-To accomodate types in our language we need to augment the assign
+To accomodate types in our language we need to augment the assignment
 statement with a declaration concept. So we can have statements like these
 
     float x
@@ -57,16 +57,16 @@ Enforcing all of this will give us a workout when we create our decorated
 tree. In our language, we will demand prior declaration. Not every language
 does that. For instance, member attributes of a Java class can be declared
 at the bottom of the class definition. We won't allow that, in part because
-I don't like it when I see it. But, forward references will be necessary
-when we introduce functions. It is a small torture to have to list functions
-before their use. (Here function really stands in for all routines:
-procedures, methods, subroutines, and the like.)
+I don't like it when I see it. Banning forward references is a small torture
+with functions, but we will endure it to make language implementation easier.
+(Here function really stands in for all routines: procedures, methods,
+subroutines, and the like.)
 
 Grammar Additions
 
 In CommonLexerRules add the FLOAT token
 
-    FLOAT : '-'? [0-9]+ '.' | '-'? '.' INT+ | '-'? INT+ '.' INT+ ;
+    FLOAT : '-'? [0-9]+ '.' | '-'? '.' [0-9]+ | '-'? [0-9]+ '.' [0-9]+ ;
 
 You could do more or less than this. These are allowed as FLOATs:
 
@@ -101,3 +101,242 @@ Finally, we need to add FLOAT as a valid expr
 
 That's it for the grammar. Now we have to teach the parse tree visitor
 and interpretter about these new features.
+
+Node Changes
+
+The fact of integer Math was baked into the Node class and its children.
+We want to augment it with methods that allow floating point numbers.
+To avoid fights with the Java type system we will use Double as our
+implementation type for the floats.
+
+Here is complete new Node class without javadoc.
+
+    public abstract class Node {
+        public abstract void act();
+        public abstract boolean canBeInt();
+        public abstract Integer getIntValue();
+        public abstract Double getFloatValue();
+        public abstract boolean getBooleanValue();
+    }
+
+The first new method is canBeInt which allows us to check for violators trying to
+store floats in int variables. The second new method is getFloatValue so we
+can retrieve floats from literals and expressions. We keep getIntValue in case
+the user declare int variables. Arrays need this too.
+
+There is a bit tedium involved in adding these methods to all the nodes. There
+are now 13 node types. So, I won't show all of that. But, here are some highlights.
+
+    public class IntNode extends Node {
+        @Override
+            public boolean canBeInt() {
+                return true;
+            }
+        @Override
+            public Double getFloatValue() {
+                return Double.valueOf(value);
+            }
+    }
+
+The key here is to allow int variables to participate in floating point calculations.
+
+    public class FloatNode extends Node {
+        Double value;
+
+        public FloatNode(Double value) {
+            this.value = value;
+        }
+
+        @Override
+        public void act() { }
+
+        @Override
+        public boolean canBeInt() {
+            return false;
+        }
+
+        @Override
+        public Integer getIntValue() {
+            throw new RuntimeException("cannot use float as int");
+        }
+
+        @Override
+        public Double getFloatValue() {
+            return value;
+        }
+
+        @Override
+        public boolean getBooleanValue() {
+            throw new RuntimeException("cannot use float to get to the truth");
+        }
+
+        public String toString() {
+            return "FLOAT " + value;
+        }
+    }
+
+We need to improve the error messages in this language. It needs to tell the line
+number when it throws. We'll live with this for now. You cannot treat
+floats as integers or booleans.
+
+    public class AddNode extends Node {
+        // ...
+        @Override
+        public boolean canBeInt() {
+            return left.canBeInt() && right.canBeInt();
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            if (canBeInt()) {
+                return left.getIntValue() + right.getIntValue();
+            }
+            else {
+                throw new RuntimeException("Attempt to perform int add with float(s)");
+            }
+        }
+    
+        @Override
+        public Double getFloatValue() {
+            return left.getFloatValue() + right.getFloatValue();
+        }
+        // ...
+    }
+
+For the calculation nodes, we ask the arguments if both can be an int, if so the
+addition can be for integers. Otherwise, calls to getIntValue are fatal.
+
+The program, conditional, if, and while nodes have to have the new methods to comply
+with the abstract superclass, but the methods aren't really meaningful and no one is
+likely to call them. The print node is a delegator. Whatever you ask it do it
+it asks the node it is printing.
+
+    public class PrintNode extends Node {
+        // ...
+        @Override
+        public void act() {
+            if (canBeInt()) {
+                System.out.println(getIntValue());
+            }
+            else {
+                System.out.println(getFloatValue());
+            }
+        }
+    
+        @Override
+        public boolean canBeInt() {
+            return valueNode.canBeInt();
+        }
+        // ...
+    }
+
+This leave the IdNode itself and the AssignNode.
+
+IdNode
+
+    public class IdNode extends Node {
+        String name;
+        EvalVisitor visitor;
+    
+        public IdNode(String name, EvalVisitor visitor) {
+            this.name = name;
+            this.visitor = visitor;
+        }
+    
+        @Override
+        public void act() { }
+    
+        @Override
+        public boolean canBeInt() {
+            Symbol symbol = visitor.resolve(name);
+            return symbol.type == Symbol.SymbolType.INT;
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            if (canBeInt()) {
+                Symbol symbol = visitor.resolve(name);
+                return symbol.getIntValue();
+            }
+            else {
+                throw new RuntimeException("Symbol " + name + " is an int not a float");
+            }
+        }
+    
+        @Override
+        public Double getFloatValue() {
+            Symbol symbol = visitor.resolve(name);
+            return symbol.getFloatValue();
+        }
+    
+        @Override
+        public boolean getBooleanValue() {
+            return getIntValue() != 0;
+        }
+    
+        public String toString() {
+            return "id " + name;
+        }
+    }
+
+This starts to show the evolution of the symbol table, which we will in more detail
+later. Instead of asking the visitor to give the integer value of the variable in
+all cases, instead we ask it for a Symbol object by calling resolve. We can
+ask that Symbol if it is an int with symbol.type == Symbol.SymbolType.INT.
+
+If the caller wants an int, we try to give it to them. But, if the Symbol is
+not an int, we can't. If they ask for a float, we give them what the Symbol returns
+for that. We treat an id as a potential boolean expression. If the int value is
+available and non-zero, we call the variable true. This allows us to simulate
+a boolean type without actually making one.
+
+    public class AssignNode extends Node {
+        // ...
+        @Override
+        public void act() {
+            Symbol symbol = visitor.resolve(name);
+            // make sure the types match
+            if (canBeInt()) {
+                if (valueNode.canBeInt()) {
+                    symbol.setIntValue(valueNode.getIntValue());
+                }
+                else {
+                    throw new RuntimeException("cannot assign float to int " + name);
+                }
+            }
+            else { // symbol is a float
+                symbol.setFloatValue(valueNode.getFloatValue());
+            }
+        }
+    
+        @Override
+        public boolean canBeInt() {
+            Symbol symbol = visitor.resolve(name);
+            return symbol.type == Symbol.SymbolType.INT;
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            Symbol symbol = visitor.resolve(name);
+            if (canBeInt()) {
+                return valueNode.getIntValue();
+            }
+            else {
+                throw new RuntimeException("cannot get int from float " + name);
+            }
+        }
+
+        @Override
+        public Double getFloatValue() {
+            return valueNode.getFloatValue();
+        }
+        // ...
+    }
+
+When we assign in this scheme, we demand that int variables only receive
+ints. Float variables can receive int or float. In the latter case, we want
+to convert the int to a float.
+
+Symbols Have Class
+
+

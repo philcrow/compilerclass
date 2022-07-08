@@ -18,8 +18,8 @@ public class IdNode extends Node {
 
     @Override
     public Integer getIntValue() {
-        Symbol symbol = visitor.resolve(name);
-        if (symbol.type == Symbol.SymbolType.INT) {
+        if (canBeInt()) {
+            Symbol symbol = visitor.resolve(name);
             return symbol.getIntValue();
         }
         else {
