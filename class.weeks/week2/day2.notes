@@ -87,8 +87,8 @@ The operators * and / are together because they share a precedence level.
 Likewise, + and - are together for the same reason. Further, * and /
 are listed first which tells antlr that they have the higher precedence.
 
-    antlr4 Expr.g4
-    javac *.java
+    gradle build
+    cd build/classes/java/main
     grun Expr program -tree -gui
     3+4
     CTRL-D
@@ -137,12 +137,21 @@ in method names.
 
 Making it Calculate
 
-    antlr4 Expr.g4 -visitor -no-listener
-    javac *.java
+Note that build.gradle has been altered to ask for the visitor pattern
+instead of the listener pattern.
+
+    generateGrammarSource {
+        arguments += ["-visitor", "-no-listener", "-long-messages"]
+    }
+
+Now when we build we antlr builds visitor code.
+
+    gradle build
+    cd build/classes/java/main
     grun Expr program -tree -gui
 
 When last we made a runner to use an antlr parser we used the Listener
-approach. That generated an enter an exit method for each rule in
+approach. That generated enter and exit methods for each rule in
 the grammar. Now we want to switch to the Visitor approach.
 
 You have to ask to receive the visitor and to stop generation of the listener.
@@ -159,25 +168,37 @@ Our runner is similiar to the earlier ones, but visits instead of walking.
     
     // Visitor approach
     public class Runner {
-        public static void main(String[] args) throws Exception {
-            // As before with only name changes.
-            CharStream        input  = CharStreams.fromFileName(args[0]);
+        public Integer run(String fileName) throws Exception {
+            CharStream input  = CharStreams.fromFileName(fileName);
+            return run(input);
+        }
+    
+        public Integer run(CharStream input) {
             ExprLexer         lexer  = new ExprLexer(input);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             ExprParser        parser = new ExprParser(tokens);
             ParseTree         tree   = parser.program();
     
-            // Our custom code
-            EvalVisitor  eval = new EvalVisitor();
-            eval.visit(tree);
+            EvalVisitor eval = new EvalVisitor();
+            return eval.visit(tree);
+        }
+    
+        public static void main(String[] args) throws Exception {
+            String fileName = args[0];
+            System.err.println( "reading " + args[0]);
+            Runner runner = new Runner();
+            Integer answer = runner.run(fileName);
         }
     }
 
-The only change is really the last two lines. There are also name changes
-to fit the new grammar. And, I removed the ParseTreeWalker.
+The biggest change is the call to visit in the second run method. There
+are also name changes to fit the new grammar. And, I removed the
+ParseTreeWalker. Note that unlike listener methods which return void,
+visitor methods return a valid value. All of them must return the same
+type. Here I chose Integer.
 
 ANTLR4 generates the interface ExprVisitor.java and ExprBaseVisitor.java
-to implement it. As before, all the methods are stubbed in
+to implement it. All the methods are stubbed in
 ExprBaseVisitor. We subclass that and implement the methods we actually
 care about.
 
@@ -257,7 +278,7 @@ care about.
 Since this language allows us to define variables, we need a way to
 keep track of their names and current values. We do that with a symbol
 table. Since we are only doing integer math, we can have a simple table
-which is just a map whose key is the variable name. That entry stores
+which is just a map whose key is the variable name which stores
 the current value of the variable. When languages have more types,
 they need a more complicated symbol table, because the values are
 of those different types.
