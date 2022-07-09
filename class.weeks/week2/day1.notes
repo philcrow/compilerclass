@@ -9,13 +9,13 @@ Review student work.
     NUMBER: '-'? [0-9]+ ;
     WS: [ \t\n\r] -> skip ;
 
-This fixes two of the issues: whitespace is no allowed between tokend
+This fixes two of the issues: whitespace is now allowed between tokend
 and numbers can actually be integers.
 
 Regular expression summary
 
 Character class: [x-y] x is the first char (in ascii order) y is the last,
-both are included in this range.
+both are included in the range.
 
 ? means optional (zero or one)
 
@@ -51,7 +51,7 @@ So we have a new program alternative. We read all of that as
     OR
     a number, a plus, and another number, which we call Add
 
-After we generate with this, the listenerll have enterMultiply, exitMultiply,
+After we generate with this, the listener will have enterMultiply, exitMultiply,
 and the same for Add, but will no longer have the enter/exit Program methods.
 So, we have to change our interpretter.
 

@@ -13,7 +13,7 @@ dependencies {
 }
 
 generateGrammarSource {
-    arguments += ["-visitor", "-no-listener", "-long-messages"]
+    arguments += ["-long-messages"]
 }
 
 jar {
