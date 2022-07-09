@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+    id 'antlr'
+}
+
+repositories {
+    mavenCentral();
+}
+
+dependencies {
+    antlr "org.antlr:antlr4:4.10.1"
+    testImplementation 'junit:junit:4.13'
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "Runner"
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+

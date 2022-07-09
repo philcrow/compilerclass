@@ -45,13 +45,16 @@ machine code you don't have a Real tm compiler.
 But, there are also interpretted languages which don't emit,
 but run what the parser builds. These are slower and sometimes
 harder to use, especially if they go one statement at a time like bash.
-Then you can't have any forward references.
+Then you can't have any forward references. But, there are others
+that compile to an intermediate form and run that. Python does this.
+It even saves compiled modules as .pyc file so they can be reused
+on subsequent runs. They are only regenerated if the source code changes.
 
 Theme: take a source code lanuage, transform it into something different,
 usually something that can run or render on a computer or virtual machine.
 
 Tool Installation
 
-We are going to use antlr4 to get started. We may use other tools later.
-Let's get that on your machine.
+We are going to use antlr4 and gradle to get started. For those you need
+a java development kit (JDK). Let's get that on your machine.
 

@@ -11,44 +11,82 @@ A Program
 When we run this program we want to see 9 on the screen.
 
 Steps:
-    1. break input into tokens, here those are 4, plus sign, and 5
-    2. parse those tokens with a grammar
+1. structure for neatness
+    app
+    ├── build.gradle
+    └── src
+        ├── main
+        │   ├── antlr
+        │   │   └── Calc.g4
+        │   └── java
+        └── test
+            └── java
+
+2. break input into tokens, here those are 4, plus sign, and 5
+
+3. parse those tokens with a grammar
         grammar Calc;
         program : NUMBER '+' NUMBER ;
         NUMBER : [0-9] ;
 
-    3. make the antlr parser:
-       antlr4 Calc.g4
-       javac *.java
+4. make the antlr parser in the app directory:
+       gradle build
+       cd build/classes/java/main
        grun Calc program -gui -tokens -tree
        4+5
        <CTRL-D> or <CTRL-Z>
 
-    4. use the resulting abstract syntax tree to compute the answer
+5. use the resulting abstract syntax tree to compute the answer
 
        program
          /|\
         / | \
        4  +  5
 
+Here is the build.gradle
+
+    plugins {
+        id 'java'
+        id 'antlr'
+    }
+    
+    repositories {
+        mavenCentral();
+    }
+    
+    dependencies {
+        antlr "org.antlr:antlr4:4.10.1"
+        testImplementation 'junit:junit:4.13'
+    }
+    
+    jar {
+        manifest {
+            attributes "Main-Class": "Runner"
+        }
+        from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        }
+    }
+
+
 We'll have a plus method of some kind that will retrieve the children,
 add them together and print.
 
 Shortcomings
 
-    1. all numbers are single digit and positive not floats no negatives
-       nothing bigger 9
-    2. spaces are not allowed, including new line
-    3. we might want other operations like -, *, and /
+1. all numbers are single digit and positive, no floats no negatives
+   nothing bigger 9
+2. spaces are not allowed, including new line
+3. we might want other operations like -, *, and /
 
 But, we can use what we have to get our first calculator.
 We need two things:
 
-    1. we need a main method in a class which drives the process:
-       a. collect input
-       b. uses the helpers (lexer, parser)
-       c. starts a tree walk
-    2. Listener to walk the tree and do the calculation
+1. we need a main method in a class which drives the process:
+   a. collect input
+   b. uses the helpers (lexer, parser)
+   c. starts a tree walk
+2. Listener to walk the tree and do the calculation
 
 The main methods are highly similar. See CalcRunner.java.
 Only the names change (the lexer, the parser, etc.). The
@@ -56,17 +94,105 @@ names are prefixed with the grammar name.
 
 To implement our language, we will write an interpretter.
 
-    cp CalcBaseListener.java Interpretter.java
+    cp ./build/generated-src/antlr/main/CalcBaseListener.java src/main/java
     edit to:
         add extends in front of CalcBaseListener, it is our parent
         add Interpretter as the class name
         delete all the Override methods, except enterProgram
 
-The ctx object there is defined in CaldParser, so we can look there
+The ctx object there is defined in CalcParser, so we can look there
 for our ctx class and use the methods.
 
 We can collect all the numbers by calling NUMBER(). Then, we
-can loop through those, adding to a total which we print.
+can loop through those, adding to a total for later printing.
+
+    int answer = 0;
+    @Override
+    public void enterProgram(CalcParser.ProgramContext ctx) {
+        List<TerminalNode> numberNodes = ctx.NUMBER();
+        for (TerminalNode node : numberNodes) {
+            answer += Integer.valueOf(node.getText());
+        }
+    }
+    public int getAnswer() {
+        return answer;
+    }
+
+To make this work, we need a main program to drive the process. It will
+need to setup the input, drive the antlr parser process, then use
+our interpretter to build the answer. Finally, it will print.
+
+This class is structured for testing. We always want a way to get unit
+tests on the bulk of the code, leaving only a little bit for integration
+testing (manual or automated). We never want much code in the actual main
+method. It is really hard to use in an automated way. That makes testing
+harder, but also limits how we can use the code. We always want to think
+about how we will incorporate code into one or more projects.
+
+    import org.antlr.v4.runtime.*;
+    import org.antlr.v4.runtime.tree.*;
+    
+    public class Runner {
+        public int run(String fileName) throws Exception {
+            // 1. get the input into a stream from a file passed on command line
+            CharStream input  = CharStreams.fromFileName(fileName);
+            return run(input);
+        }
+    
+        public int run(CharStream input) {
+            // there are other ways to feed input, notably stdin
+            // CharStreams.fromStream(System.in);
+    
+            // 2. user the stream to construct the lexer
+            CalcLexer         lexer  = new CalcLexer(input);
+    
+            // 3. use the lexer to produce the token stream
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+    
+            // 4. use the token stream to construct the parser
+            CalcParser        parser = new CalcParser(tokens);
+    
+            // 5. tell the parser to start at the program rule
+            ParseTree         tree   = parser.program();
+    
+            // 6. make a walker that can visit the nodes in the AST
+            ParseTreeWalker   walker = new ParseTreeWalker();
+    
+            // Our custom code
+            Interpretter  interpretter = new Interpretter();
+            walker.walk(interpretter, tree);
+    
+            return interpretter.getAnswer();
+        }
+    
+        public static void main(String[] args) throws Exception {
+            String fileName = args[0];
+            Runner runner = new Runner();
+            int answer = runner.run(fileName);
+    
+            System.err.println( "answer: " + answer);
+        }
+    }
+
+This setup makes it relatievly easy to put a test on the code. (I'm using
+junit 4 whose setup is easier than junit 5.)
+
+    import org.antlr.v4.runtime.*;
+    
+    import org.junit.*;
+    import static org.junit.Assert.*;
+    
+    public class RunnerTest {
+        @Test
+        public void interpretterTests() {
+            String program = "4+5";
+            CharStream input = CharStreams.fromString(program);
+            Runner runner = new Runner();
+            int answer = runner.run(input);
+            assertEquals(9, answer);
+        }
+    }
+
 When we produce our output, we have written our very own interpretted
 language!
 
