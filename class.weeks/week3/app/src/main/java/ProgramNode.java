@@ -23,6 +23,10 @@ public class ProgramNode extends Node {
     }
 
     public String toString() {
-        return "program";
+        StringBuilder sb = new StringBuilder();
+        for (Node statement : statements) {
+            sb.append("[" + statement.toString() + "]");
+        }
+        return sb.toString();
     }
 }
