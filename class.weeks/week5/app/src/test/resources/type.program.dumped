@@ -1,0 +1,3 @@
+[assign y FLOAT 12.3]
+[assign x multiply id y * INT 3]
+[print [id x]]

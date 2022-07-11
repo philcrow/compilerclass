@@ -36,6 +36,6 @@ public class PrintNode extends Node {
     }
 
     public String toString() {
-        return "print " + valueNode;
+        return "print [" + valueNode + "]";
     }
 }
