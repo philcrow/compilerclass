@@ -30,6 +30,11 @@ public class IfNode extends Node {
     }
 
     public String toString() {
-        return "if (" + conditional + ")" + thenBlock + " " + elseBlock;
+        if (elseBlock == null) {
+            return "if (" + conditional + ")then\n" + thenBlock;
+        }
+        else {
+            return "if (" + conditional + ")then\n" + thenBlock + "else\n" + elseBlock;
+        }
     }
 }

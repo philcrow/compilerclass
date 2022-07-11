@@ -1,0 +1,4 @@
+[assign x INT 10]
+[while (compare id x > INT 0)[print [id x]]
+[assign x subtract id x - INT 1]
+]

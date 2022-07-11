@@ -8,6 +8,9 @@ repositories {
 
 dependencies {
     antlr "org.antlr:antlr4:4.10.1"
+    testImplementation 'junit:junit:4.13'
+    implementation 'commons-io:commons-io:2.6'
+
 }
 
 generateGrammarSource {
@@ -21,4 +24,8 @@ jar {
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
+}
+
+test {
+    testLogging.showStandardStreams = true
 }

@@ -1,0 +1,9 @@
+[assign hrs INT 42]
+[assign rate INT 10]
+[assign pay INT 0]
+[if (compare id hrs < INT 40)then
+[assign pay multiply id hrs * id rate]
+else
+[assign pay Add multiply INT 40 * id rate + divide multiply multiply subtract id hrs - INT 40 * id rate * INT 3 / INT 2]
+]
+[print [id pay]]

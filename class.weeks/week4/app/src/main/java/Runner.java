@@ -3,17 +3,26 @@ import org.antlr.v4.runtime.tree.*;
 
 // Visitor approach
 public class Runner {
-    public static void main(String[] args) throws Exception {
-        // As before with only name changes.
-        CharStream        input  = CharStreams.fromFileName(args[0]);
+    public Node run(String fileName) throws Exception {
+        CharStream input  = CharStreams.fromFileName(fileName);
+        return run(input);
+    }
+
+    public Node run(CharStream input) {
         ExprLexer         lexer  = new ExprLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         ExprParser        parser = new ExprParser(tokens);
         ParseTree         tree   = parser.program();
 
-        // Our custom code
         EvalVisitor eval = new EvalVisitor();
         Node program = eval.visit(tree);
         program.act();
+
+        return program;
+    }
+
+    public static void main(String[] args) throws Exception {
+        Runner runner = new Runner();
+        runner.run(args[0]);
     }
 }
