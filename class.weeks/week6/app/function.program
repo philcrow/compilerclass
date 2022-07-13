@@ -1,0 +1,9 @@
+float x = 9.2
+
+function f(float x) : float {
+    return 2 * x
+}
+
+float y = f(3.2)
+
+print y
