@@ -2,7 +2,8 @@ public class AddNode extends Node {
     Node left;
     Node right;
 
-    public AddNode(Node left, Node right) {
+    public AddNode(int lineNumber, Node left, Node right) {
+        super(lineNumber);
         this.left = left;
         this.right = right;
     }

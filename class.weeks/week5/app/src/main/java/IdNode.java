@@ -2,7 +2,8 @@ public class IdNode extends Node {
     String name;
     EvalVisitor visitor;
 
-    public IdNode(String name, EvalVisitor visitor) {
+    public IdNode(int lineNumber, String name, EvalVisitor visitor) {
+        super(lineNumber);
         this.name = name;
         this.visitor = visitor;
     }
@@ -23,7 +24,8 @@ public class IdNode extends Node {
             return symbol.getIntValue();
         }
         else {
-            throw new RuntimeException("Symbol " + name + " is an int not a float");
+            // probably prevented by AssignNode
+            throw new RuntimeException("Symbol " + name + " is a float not an int");
         }
     }
 

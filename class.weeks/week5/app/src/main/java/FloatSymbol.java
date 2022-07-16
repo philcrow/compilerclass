@@ -10,6 +10,9 @@ public class FloatSymbol extends Symbol {
     }
 
     public Double getFloatValue() {
+        if (value == null) {
+            throw new RuntimeException("Symbol '" + getName() + "' has no value");
+        }
         return value;
     }
 

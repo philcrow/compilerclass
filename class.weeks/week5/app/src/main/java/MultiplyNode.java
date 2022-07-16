@@ -2,7 +2,8 @@ public class MultiplyNode extends Node {
     Node left;
     Node right;
 
-    public MultiplyNode(Node left, Node right) {
+    public MultiplyNode(int lineNumber, Node left, Node right) {
+        super(lineNumber);
         this.left = left;
         this.right = right;
     }

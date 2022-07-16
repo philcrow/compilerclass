@@ -1,7 +1,8 @@
 public class IntNode extends Node {
     Integer value;
 
-    public IntNode(Integer value) {
+    public IntNode(int lineNumber, Integer value) {
+        super(lineNumber);
         this.value = value;
     }
 

@@ -3,7 +3,8 @@ public class ConditionalNode extends Node {
     String comparitor;
     Node right;
 
-    public ConditionalNode(Node left, String comparitor, Node right) {
+    public ConditionalNode(int lineNumber, Node left, String comparitor, Node right) {
+        super(lineNumber);
         this.left = left;
         this.comparitor = comparitor;
         this.right = right;

@@ -1,7 +1,8 @@
 public class PrintNode extends Node {
     Node valueNode;
 
-    public PrintNode(Node valueNode) {
+    public PrintNode(int lineNumber, Node valueNode) {
+        super(lineNumber);
         this.valueNode = valueNode;
     }
 

@@ -2,7 +2,8 @@ public class DivideNode extends Node {
     Node left;
     Node right;
 
-    public DivideNode(Node left, Node right) {
+    public DivideNode(int lineNumber, Node left, Node right) {
+        super(lineNumber);
         this.left = left;
         this.right = right;
     }
@@ -21,6 +22,7 @@ public class DivideNode extends Node {
             return left.getIntValue() / right.getIntValue();
         }
         else {
+            // prevented by AssignNode
             throw new RuntimeException("Attempt to perform int division with float(s)");
         }
     }

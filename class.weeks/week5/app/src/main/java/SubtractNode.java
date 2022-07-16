@@ -2,7 +2,8 @@ public class SubtractNode extends Node {
     Node left;
     Node right;
 
-    public SubtractNode(Node left, Node right) {
+    public SubtractNode(int lineNumber, Node left, Node right) {
+        super(lineNumber);
         this.left = left;
         this.right = right;
     }

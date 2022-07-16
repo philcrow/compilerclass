@@ -3,7 +3,8 @@ public class AssignNode extends Node {
     Node valueNode;
     EvalVisitor visitor;
 
-    public AssignNode(String name, Node valueNode, EvalVisitor visitor) {
+    public AssignNode(int lineNumber, String name, Node valueNode, EvalVisitor visitor) {
+        super(lineNumber);
         this.name = name;
         this.valueNode = valueNode;
         this.visitor = visitor;
@@ -15,14 +16,26 @@ public class AssignNode extends Node {
         // make sure the types match
         if (canBeInt()) {
             if (valueNode.canBeInt()) {
-                symbol.setIntValue(valueNode.getIntValue());
+                try {
+                    symbol.setIntValue(valueNode.getIntValue());
+                }
+                catch (Exception e) {
+                    String message = e.getMessage() + " at line " + getLineNumber();
+                    throw new RuntimeException(message);
+                }
             }
             else {
-                throw new RuntimeException("cannot assign float to int " + name);
+                throw new RuntimeException("cannot assign float to int " + name + " at line " + getLineNumber());
             }
         }
         else { // symbol is a float
-            symbol.setFloatValue(valueNode.getFloatValue());
+            try {
+                symbol.setFloatValue(valueNode.getFloatValue());
+            }
+            catch (Exception e) {
+                String message = e.getMessage() + " at line " + getLineNumber();
+                throw new RuntimeException(message);
+            }
         }
     }
 
@@ -34,23 +47,20 @@ public class AssignNode extends Node {
 
     @Override
     public Integer getIntValue() {
-        Symbol symbol = visitor.resolve(name);
-        if (canBeInt()) {
-            return valueNode.getIntValue();
-        }
-        else {
-            throw new RuntimeException("cannot get int from float " + name);
-        }
+        // this is not meaningfully called
+        return null;
     }
 
     @Override
     public Double getFloatValue() {
-        return valueNode.getFloatValue();
+        // this is not meaningfully called
+        return null;
     }
 
     @Override
     public boolean getBooleanValue() {
-        return getIntValue() != 0;
+        // this is not meaningfully called
+        return false;
     }
 
     public String toString() {

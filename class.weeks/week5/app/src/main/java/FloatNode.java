@@ -1,7 +1,8 @@
 public class FloatNode extends Node {
     Double value;
 
-    public FloatNode(Double value) {
+    public FloatNode(int lineNumber, Double value) {
+        super(lineNumber);
         this.value = value;
     }
 

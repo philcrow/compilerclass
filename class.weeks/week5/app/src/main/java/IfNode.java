@@ -3,7 +3,8 @@ public class IfNode extends Node {
     Node thenBlock;
     Node elseBlock;
 
-    public IfNode(Node conditional, Node thenBlock, Node elseBlock) {
+    public IfNode(int lineNumber, Node conditional, Node thenBlock, Node elseBlock) {
+        super(lineNumber);
         this.conditional = conditional;
         this.thenBlock = thenBlock;
         this.elseBlock = elseBlock;

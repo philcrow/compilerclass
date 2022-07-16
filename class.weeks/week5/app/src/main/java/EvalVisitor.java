@@ -28,10 +28,11 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
 
     @Override
     public Node visitProgram(ExprParser.ProgramContext ctx) {
-        return buildProgramNode(ctx.statement());
+        int lineNumber = ctx.getStart().getLine();
+        return buildProgramNode(lineNumber, ctx.statement());
     }
 
-    private Node buildProgramNode(List<ExprParser.StatementContext> parserStatements) {
+    private Node buildProgramNode(int lineNumber, List<ExprParser.StatementContext> parserStatements) {
         List<Node> programStatements = new ArrayList<>();
         for (ExprParser.StatementContext statement : parserStatements) {
             Node programStatement = visit(statement);
@@ -39,7 +40,7 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
                 programStatements.add(programStatement);
             }
         }
-        return new ProgramNode(programStatements);
+        return new ProgramNode(lineNumber, programStatements);
     }
 
     // Statements
@@ -48,7 +49,8 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
     public Node visitPrintExpr(ExprParser.PrintExprContext ctx) {
         Node value = visit(ctx.expr());
 
-        return new PrintNode(value);
+        int lineNumber = ctx.getStart().getLine();
+        return new PrintNode(lineNumber, value);
     }
 
     // this is a compile time only statement
@@ -66,9 +68,10 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         String type = ctx.type().getText();
         String id = ctx.ID().getText();
         Node valueNode = visit(ctx.expr());
+        int lineNumber = ctx.getStart().getLine();
 
         declare(type, id);
-        return new AssignNode(id, valueNode, this);
+        return new AssignNode(lineNumber, id, valueNode, this);
     }
 
     private void declare(String type, String id) {
@@ -78,13 +81,14 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
 
     @Override
     public Node visitAssign(ExprParser.AssignContext ctx) {
+        int lineNumber = ctx.getStart().getLine();
         String id = ctx.ID().getText();
         if (globalSymbols.resolve(id) == null) {
-            throw new RuntimeException("ID " + id + " must be declared");
+            throw new RuntimeException("ID " + id + " must be declared at line " + lineNumber);
         }
         Node valueNode = visit(ctx.expr());
 
-        return new AssignNode(id, valueNode, this);
+        return new AssignNode(lineNumber, id, valueNode, this);
     }
 
     @Override
@@ -97,7 +101,8 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
             elseBlock = visit(ctx.else_());
         }
 
-        return new IfNode(conditional, thenBlock, elseBlock);
+        int lineNumber = ctx.getStart().getLine();
+        return new IfNode(lineNumber, conditional, thenBlock, elseBlock);
     }
 
     @Override
@@ -105,7 +110,8 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         Node conditional = visit(ctx.conditional());
         Node block = visit(ctx.block());
 
-        return new WhileNode(conditional, block);
+        int lineNumber = ctx.getStart().getLine();
+        return new WhileNode(lineNumber, conditional, block);
     }
 
     // Primatives
@@ -113,20 +119,23 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
     @Override
     public Node visitInt(ExprParser.IntContext ctx) {
         Integer value = Integer.parseInt(ctx.INT().getText());
-        return new IntNode(value);
+        int lineNumber = ctx.getStart().getLine();
+        return new IntNode(lineNumber, value);
     }
 
     @Override
     public Node visitFloat(ExprParser.FloatContext ctx) {
         Double value = Double.parseDouble(ctx.FLOAT().getText());
-        return new FloatNode(value);
+        int lineNumber = ctx.getStart().getLine();
+        return new FloatNode(lineNumber, value);
     }
 
     @Override
     public Node visitId(ExprParser.IdContext ctx) {
         // statements will not traverse to this method, only exprs will do that
         String id = ctx.ID().getText();
-        return new IdNode(id, this);
+        int lineNumber = ctx.getStart().getLine();
+        return new IdNode(lineNumber, id, this);
     }
 
     // Operations
@@ -136,11 +145,12 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         Node left = visit(ctx.expr(0));
         Node right = visit(ctx.expr(1));
 
+        int lineNumber = ctx.getStart().getLine();
         if (ctx.op.getType() == ExprParser.MUL) {
-            return new MultiplyNode(left, right);
+            return new MultiplyNode(lineNumber, left, right);
         }
         else {
-            return new DivideNode(left, right);
+            return new DivideNode(lineNumber, left, right);
         }
     }
 
@@ -149,11 +159,12 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         Node left = visit(ctx.expr(0));
         Node right = visit(ctx.expr(1));
 
+        int lineNumber = ctx.getStart().getLine();
         if (ctx.op.getType() == ExprParser.ADD) {
-            return new AddNode(left, right);
+            return new AddNode(lineNumber, left, right);
         }
         else {
-            return new SubtractNode(left, right);
+            return new SubtractNode(lineNumber, left, right);
         }
     }
 
@@ -168,12 +179,14 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         Node left = visit(ctx.expr(0));
         Node right = visit(ctx.expr(1));
 
-        return new ConditionalNode(left, comparitor, right);
+        int lineNumber = ctx.getStart().getLine();
+        return new ConditionalNode(lineNumber, left, comparitor, right);
     }
 
     @Override
     public Node visitBlock(ExprParser.BlockContext ctx) {
-        return buildProgramNode(ctx.statement());
+        int lineNumber = ctx.getStart().getLine();
+        return buildProgramNode(lineNumber, ctx.statement());
     }
 
     @Override

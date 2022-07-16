@@ -2,7 +2,8 @@ public class WhileNode extends Node {
     Node conditional;
     Node block;
 
-    public WhileNode(Node conditional, Node block) {
+    public WhileNode(int lineNumber, Node conditional, Node block) {
+        super(lineNumber);
         this.conditional = conditional;
         this.block = block;
     }

@@ -3,7 +3,8 @@ import java.util.List;
 public class ProgramNode extends Node {
     List<Node> statements;
 
-    public ProgramNode(List<Node> statements) {
+    public ProgramNode(int lineNumber, List<Node> statements) {
+        super(lineNumber);
         this.statements = statements;
     }
 
