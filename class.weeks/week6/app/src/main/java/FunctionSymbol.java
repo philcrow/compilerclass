@@ -22,11 +22,20 @@ public class FunctionSymbol extends Symbol {
         return null;
     }
 
-    public void setIntValue(Integer newValue) {
+    public FunctionNode getFunctionValue() {
+        return value;
+    }
 
+    public void setIntValue(Integer newValue) {
+        // throw here
     }
 
     public void setFloatValue(Double newValue) {
+        // throw here
+    }
+
+    public void setFunctionValue(FunctionNode newValue) {
+        value = newValue;
     }
 
     public String toString() {

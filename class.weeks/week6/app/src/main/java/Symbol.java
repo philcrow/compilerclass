@@ -24,8 +24,10 @@ public abstract class Symbol {
 
     public abstract Integer getIntValue();
     public abstract Double getFloatValue();
+    public abstract FunctionNode getFunctionValue();
     public abstract void setIntValue(Integer newValue);
     public abstract void setFloatValue(Double newValue);
+    public abstract void setFunctionValue(FunctionNode functionValue);
 
     public String getName() {
         return name;

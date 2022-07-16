@@ -13,12 +13,20 @@ public class FloatSymbol extends Symbol {
         return value;
     }
 
+    public FunctionNode getFunctionValue() {
+        throw new RuntimeException("Symbol '" + getName() + "' is a float not a function");
+    }
+
     public void setIntValue(Integer newValue) {
         value = Double.valueOf(newValue);
     }
 
     public void setFloatValue(Double newValue) {
         value = newValue;
+    }
+
+    public void setFunctionValue(FunctionNode newValue) {
+        // throw?
     }
 
     public String toString() {

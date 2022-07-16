@@ -27,6 +27,18 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         symbols.peek().resolve(name).setFloatValue(newValue);
     }
 
+    public void setReturnValue(String name, Symbol symbol) {
+        symbols.peek().set(name, symbol);
+    }
+
+    public void pushSymbolTable(SymbolTable functionSymbols) {
+        symbols.push(functionSymbols);
+    }
+
+    public SymbolTable popSymbolTable() {
+        return symbols.pop();
+    }
+
     // Parse Tree Visitors
 
     @Override
@@ -114,35 +126,67 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         return new WhileNode(conditional, block);
     }
 
+    // this is a compile time only definition
     @Override
     public Node visitFunctionDefiniton(ExprParser.FunctionDefinitonContext ctx) {
         SymbolTable functionSymbols = new SymbolTable();
         symbols.push(functionSymbols);
 
-        List<Node> parameters = collectParameters(ctx.paramList());
+        List<ParameterNode> parameters = collectParameters(ctx.paramList());
 
         Node block = visit(ctx.block());
 
         String returnType = ctx.type().getText();
 
-        Node answer = new FunctionNode(parameters, returnType, block);
+        FunctionNode functionNode = new FunctionNode(parameters, returnType, block);
 
+        // back to the parent symbol table...
         symbols.pop();
 
         String functionName = ctx.ID().getText();
         declare("function", functionName);
+        Symbol functionSymbol = resolve(functionName);
+        // we need to put the node into the symbol table, not just record its name
+        functionSymbol.setFunctionValue(functionNode);
 
-        return answer;
+        return null;
     }
 
-    private List<Node> collectParameters(ExprParser.ParamListContext ctx) {
-        List<Node> answer = new ArrayList<>();
+    private List<ParameterNode> collectParameters(ExprParser.ParamListContext ctx) {
+        List<ParameterNode> answer = new ArrayList<>();
         while (ctx != null) {
-            Node param = visit(ctx.param());
+            ParameterNode param = (ParameterNode)visit(ctx.param());
             answer.add(param);
             ctx = ctx.paramList();
         }
         return answer;
+    }
+
+    @Override
+    public Node visitCall(ExprParser.CallContext ctx) {
+        String functionName = ctx.ID().getText();
+        List<Node> arguments = collectArguments(ctx.exprList());
+        // during run time we need to evaluate these based on the parameter types
+        // of the function and load them into its symbol table
+
+        return new CallNode(functionName, arguments, this);
+    }
+
+    private List<Node> collectArguments(ExprParser.ExprListContext ctx) {
+        List<Node> answer = new ArrayList<>();
+        while (ctx != null) {
+            Node param = visit(ctx.expr());
+            answer.add(param);
+            ctx = ctx.exprList();
+        }
+        return answer;
+    }
+
+    @Override
+    public Node visitReturn(ExprParser.ReturnContext ctx) {
+        Node value = visit(ctx.expr());
+
+        return new ReturnNode(value, this);
     }
 
     // Primatives

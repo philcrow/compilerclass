@@ -5,6 +5,10 @@ public class ParameterNode extends Node {
         this.symbol = symbol;
     }
 
+    public Symbol getSymbol() {
+        return symbol;
+    }
+
     @Override
     public void act() { }
 

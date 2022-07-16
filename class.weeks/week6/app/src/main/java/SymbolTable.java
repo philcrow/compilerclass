@@ -15,4 +15,8 @@ public class SymbolTable {
     public void set(String name, Symbol symbol) {
         table.put(name, symbol);
     }
+
+    public String toString() {
+        return "symbols " + table;
+    }
 }
