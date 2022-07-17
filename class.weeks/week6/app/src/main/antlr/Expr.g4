@@ -28,7 +28,8 @@ paramList : param ',' paramList
 
 param : type ID ;
 
-expr : expr op=(MUL|DIV) expr       # MulDiv
+expr : '-' expr                     # unaryNegation
+     | expr op=(MUL|DIV) expr       # MulDiv
      | expr op=(ADD|SUB) expr       # AddSub
      | INT                          # int
      | FLOAT                        # float

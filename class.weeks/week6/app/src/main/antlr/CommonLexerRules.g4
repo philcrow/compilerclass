@@ -1,13 +1,13 @@
 lexer grammar CommonLexerRules;
 
+MUL : '*' ;
+DIV : '/' ;
+ADD : '+' ;
+SUB : '-' ;
 ID : [a-zA-Z]+ ;
-INT : '-'? [0-9]+ ;
+INT : [0-9]+ ;
 FLOAT : '-'? [0-9]+ '.' | '-'? '.' [0-9]+ | '-'? [0-9]+ '.' [0-9]+ ;
 COMPARISON : '==' | '!=' | '<' | '>' | '<=' | '>=' ;
 NEWLINE : '\r'? '\n' ;
 WS : [ \t] -> skip ;
 
-MUL : '*' ;
-DIV : '/' ;
-ADD : '+' ;
-SUB : '-' ;

@@ -27,4 +27,20 @@ public class RunnerTest {
 
         assertEquals(dumpedProgram, answer.toString());
     }
+
+    @Test
+    public void subtractionTest() {
+        String program = "print 8-7\n";
+        Node answer = run(program);
+
+        assertEquals("[print [subtract INT 8 - INT 7]]\n", answer.toString());
+    }
+
+    @Test
+    public void subtractionNegativeTest() {
+        String program = "print 8--7\n";
+        Node answer = run(program);
+
+        assertEquals("[print [subtract INT 8 - NEGATED INT 7]]\n", answer.toString());
+    }
 }

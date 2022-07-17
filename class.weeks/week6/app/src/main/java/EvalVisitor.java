@@ -204,6 +204,12 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
     }
 
     @Override
+    public Node visitUnaryNegation(ExprParser.UnaryNegationContext ctx) {
+        Node pleaseNegate = visit(ctx.expr());
+        return new UnaryNegationNode(pleaseNegate);
+    }
+
+    @Override
     public Node visitId(ExprParser.IdContext ctx) {
         // statements will not traverse to this method, only exprs will do that
         String id = ctx.ID().getText();
