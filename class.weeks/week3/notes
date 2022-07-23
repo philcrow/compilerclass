@@ -153,19 +153,26 @@ and for memory management (like arrays and record structures like object instanc
 
 While a decorated parse tree is essential for emitting code in a target language,
 it is also the key to interpretting the language. In my career I have only
-emitted target code as an exercise, but I have written interpretters for production use.
+emitted assembly as an exercise, but I have written interpretters for production use.
 Therefore, I want to start by building a tree that lets us interpret the language.
 This is actually a hybrid approach. Truly interpretted languages (like bash or
 another command line shell) don't look ahead. They simply run the commands as they
 see them. Our interpretter is more robust, because the whole program is built
 into the decorated tree. Eventually that allows us to do things like run
 routines (methods, functions, etc.) which are defined later in the source file.
+This type of language is called compile and go. It takes source each
+time you run it, compiles that to an internal form it can run, then immediately
+runs it. Python and Perl work this way. Python does save some of the
+internal forms as file (pyc) to save time on later runs, so it is almost
+using a byte code virtual machine. Raku (fka perl6) targets parrot, but
+doesn't necessarily save the byte codes.
 
 Housekeeping
 
 Make a directory called 'app' for the work. In it put this build.gradle
 
     plugins {
+        id 'java'
         id 'antlr'
     }
     
@@ -175,6 +182,9 @@ Make a directory called 'app' for the work. In it put this build.gradle
     
     dependencies {
         antlr "org.antlr:antlr4:4.10.1"
+        testImplementation 'junit:junit:4.13'
+        testImplementation 'commons-io:commons-io:2.6'
+        testImplementation 'org.hamcrest:java-hamcrest:2.0.0.0'
     }
     
     generateGrammarSource {
@@ -188,6 +198,10 @@ Make a directory called 'app' for the work. In it put this build.gradle
         from {
             configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
         }
+    }
+    
+    test {
+        testLogging.showStandardStreams = true
     }
 
 We can use this exactly as is for any ANTLR4 project that will use the visitor pattern.
