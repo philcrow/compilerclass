@@ -1,0 +1,219 @@
+Introductions
+    Personal
+    Class
+Compiler Background
+    Full - like gcc, source -> assembly -> executable
+    VM - like Java, InfoComm z machine
+    Compile and Go - like Python (pyc for compiled module caching), perl
+    Transpile - like typescript or coffee script -> javascript, or Sass -> CSS
+    Visual - dot -> png (or other formats)
+           - tex/latex -> pdf (orinally used .tex -> .dvi -> your output choice)
+           - lilypond -> pdf
+    Generators - often proprietary, json -> sql
+Install Software
+    java
+    gradle
+    antlr4, including grun for command line
+
+A Programming Language
+    Presenting a language that only adds one digit numbers.
+        Script to create a project structure, see ~/githubhome/compilerclass/class.weeks/week1/app
+        Standard build.gradle (listener form)
+        The grammar (Calc.g4)
+        The Listener (a copy of CalcBaseListener, renamed to Interpretter.java)
+        The driver (or Runner.java)
+        One simple test (app/src/test/java/RunnerTest.java)
+Terminology
+    token - a named unit of source code, like an ID or method name
+    lexeme - the actual text that was recognized as a token like 'main'
+    grammar - definition of the structure of a language, rules that consume tokens
+    parse tree (or abstract syntax tree, AST) - a tree data structure for a program matched by the grammar
+Assignment
+    a. expand the NUMBER rule in the grammar to allow multiple digits
+    b. ask the internet how to skip whitespace in an antlr grammar
+    Remember to add tests for new features.
+
+Regular Expressions
+    NUMBER: '-'? [0-9]+ ;
+    WS: [ \t\n\r] -> skip ;
+    Most things in a regular expression are literal.
+    Quote a special character with ''.
+    Square brackets are for character classes like: [0-9], which can use ranges [a-zA-Z] etc.
+    ? means preceeding is optional
+    + means preceeding is required, but can be repeated
+    * means preceeding is optional, and can be repeated
+Numbers are Complicated
+    See https://www.json.org/json-en.html for example.
+    Also, when we introduce subtraction the minus sign will play double duty.
+    We'll have to think about that.
+Multiplication
+    This will give two options for programs.
+    See ~/githubhome/compilerclass/class.weeks/week2/app1/src/main/antlr/Calc.g4
+    Things of note:
+        a simple rule is name : production
+        if there are multiple options for that name, use alternatives
+            name : production1  # label1
+                 | production2  # label2
+                 ;
+        antlr precedence antlr is first come, first served. Since Multiply is first, it has precedence.
+    The use of : and | is pretty standard. The labels are special to antlr.
+    They generate separate methods, based on the different labels.
+        See app1/src/main/java/Interpretter.java
+    There are still tests
+        See app1/src/test/java/RunnerTest.java
+Assignment
+    a. expand the grammar and interpretter to handle subtraction and division
+       (precedence will be an issue, you can ignore it for now)
+    b. using alternatives, expand the options for NUMBER to including at least some decimals like 3.2
+    remember to add tests
+
+An Expression Language
+    from The Definitive ANTLR4 Reference, by Terence Parr (the author of antlr)
+    First, split out some more or less standard definitions into a lexer grammar.
+        See ~/githubhome/compilerclass/class.weeks/week2/app2/src/main/antlr/CommonLexerRules.g4
+        features:
+            Variable names (identifiers) can only have Latin letters.
+            I've added negative numbers (but that introduces a bug with subtraction).
+            Newline will be our statement terminator (instead of semi-colon).
+            Whitespace is no just space and tab.
+            There are labels for the arithmetic operators.
+    Second, the grammar has grown.
+        See app2/src/main/antlr/Expr.g4
+        features:
+            A program is one or more statements.
+            There are three legal statement forms:
+                an expression on a line by itself (we'll print these)
+                an assignment, which declares a variable and give it a value
+                a blank line, for neatness (we'll ignore these)
+            Our old grammar is in inside the expr.
+            There are five legal expression forms:
+                an expression multiplied or divided by an expression (MulDiv)
+                an expression added to or subtracted from an expression (AddSub)
+                a literal integer
+                a variable (ID) to be replaced with its most recently assigned value
+                an expression in parentheses
+            Note that tokens can be named:
+                op=('*'|'/')
+                this makes a method called op we can use to see which one the grammar captured
+    We're switching from Listening to Visiting. This creates superficial changes in the Runner.
+        See
+            app2/build.gradle (-visitor -no-listener)
+            app2/src/main/java/Runner.java
+    But, bigger changes in the interpretter.
+        See app2/src/main/java/EvalVisitor.java which is based on ExprBaseVisitor
+Assignment (pick one)
+    1. Make a new visitor with the same structure as EvalVisitor.java.
+       But, change the generic type to String (was Integer). Instead of
+       calculating, each method should return its output in postfix
+       notation with one item per line ready for the dc unix calculator.
+       In visitPrintExpr print the results from the children and
+       end the output with a p to pop the stack and print the result.
+       So 3 + 2 becomes
+       3
+       2
+       +
+       p
+       Alternatively, if your system does not have dc, omit the p and send
+       to a python stack machine:
+       https://github.com/philcrow/compilerclass/blob/main/stackmachine/machine.py
+    2. Convert Expr.g4 to do floating point Math. You will need to
+       replace the INT token with a NUMBER that captures floats,
+       then change the visitor to use Double instead of Integer.
+       Please allow negative numbers.
+
+Semantics, from Parse Tree to Internal Represenation
+    ANTLR builds a parse tree that we can visit.
+    We need a tree we can interpret or use to emit a target language (like assembly).
+    This tree is called a decorated tree, an anotated tree.
+    It is one kind of internal representation.
+Nodes
+    Our tree will need a common Node type to represent all members.
+    The members are for the grammar productions we need to keep.
+    All will inherit from an abstract Node.
+    We need one for the top level:
+        ProgramNode
+    one for each statement:
+        AssignNode
+        PrintNode
+    one per operation:
+        AddNode
+        SubtractNode
+        MultiplyNode
+        DivideNode
+    one per primative:
+        IdNode
+        IntNode
+Categories
+    These Nodes actually break down into two categories:
+        1. Those that can act (statements, the whole program)
+        2. Those that only know a value (operations, IDs, and INTs)
+    We make an abstract method for each type:
+        public abstract void act();
+        public abstract Integer getIntValue();
+    All nodes implement both methods, but some do nothing with them.
+    We also want a good toString so we can debug.
+    Walk through the nodes in the above list, from bottom to top.
+    Draw.
+Parse Tree to Node Tree
+    The visit methods now collect information (by visiting children) and record that in nodes.
+    The result is a tree with a root ProgramNode.
+    EvalVisitor also store the symbol table and helpers for that.
+    You could do that differently. (See exercise 1.)
+Exercises (pick one)
+    1. Create a SymbolTable class so the Node classes can be given that
+       and don't need an EvalVisitor instance.
+    2. The ExprParser...Context objects have information about the tokens. Find the line number
+       in each context. Add that as an attribute of the Node class. Adjust IdNode so it throws
+       an exception with the line number when a symbol is not defined in getIntValue.
+    For whichever one you pick, add tests. Integration tests are good here. Feed in a whole program,
+    see if you get what you want (Is the ProgramNode what you expected? Does it throw the Exception
+    you had in mind on error?)
+
+Flow of Control
+    Loops and conditionals provide flow of control.
+    Various languages have different flow of control.
+    Most have at least if/else and while. That is all we will implement.
+    (No switch, streams, do/while, for(;;), foreach, etc.)
+Conditionals
+    if and while both need a boolean for their test.
+        in the grammar
+        conditional : expr compare=COMPARISON expr ;
+        in the common lexer rules
+        COMPARISON : '==' | '!=' | '<' | '>' | '<=' | '>='
+New Statements
+    statement : ...
+              | 'if' '(' conditional ')' block else?    # ifStatement
+              | 'while' '(' conditional ')' block       # whileStatement
+    Here if and while are literal, conditional is defined above.
+    We still need block and else.
+        else : 'else' block ;
+        This is makes it easy to make this optional (and to find it when we visit the parse tree).
+    Finally, the block rule
+        block : '{' statement* '}' NEWLINE? ;
+    These statements must have a closing brace
+    The new line is optional to allow more formatting choices.
+New Node Property
+    Conditionals need to report true or false.
+    We could use Integer for that, with zero false and non-zero true.
+    Instead add to Node
+        public abstract boolean getBooleanValue();
+    All the Nodes need that now.
+    This is a feature of trees: all nodes have the same API, but none need all of it.
+New Nodes
+    We need these new Node subclasses:
+        ConditionalNode
+        IfNode
+        WhileNode
+    ConditionalNode will not need good code in getIntValue or act, but needs getBooleanValue.
+    IfNode and WhileNode will need to ask for their conditional's boolean value, then
+    execute.
+    What about the block? Use ProgramNode for that. A block is just a little program. Embrace the recursion.
+Exercise
+    1. Add the new nodes.
+    2. Adjust EvalVistor to use them with the newly expanded grammar.
+    3. Test with programs using the new features.
+
+Types
+    So for our language has only integers.
+    Expand to floats. This is only scratching the surface of a type system.
+
