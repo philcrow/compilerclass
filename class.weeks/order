@@ -62,9 +62,8 @@ Multiplication
     There are still tests
         See app1/src/test/java/RunnerTest.java
 Assignment
-    a. expand the grammar and interpretter to handle subtraction and division
+    expand the grammar and interpretter to handle subtraction and division
        (precedence will be an issue, you can ignore it for now)
-    b. using alternatives, expand the options for NUMBER to including at least some decimals like 3.2
     remember to add tests
 
 An Expression Language
@@ -159,7 +158,7 @@ Parse Tree to Node Tree
     The result is a tree with a root ProgramNode.
     EvalVisitor also store the symbol table and helpers for that.
     You could do that differently. (See exercise 1.)
-Exercises (pick one)
+Assignment (pick one)
     1. Create a SymbolTable class so the Node classes can be given that
        and don't need an EvalVisitor instance.
     2. The ExprParser...Context objects have information about the tokens. Find the line number

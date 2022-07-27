@@ -1,0 +1,64 @@
+1. Given a language that adds single digit numbers,
+   expand NUMBER rule in grammar to multiple digits and skip whitespace
+   add tests
+
+2. Given a language that adds and multiplies integers,
+   expand the grammar and interpretter to handle division and subtraction
+   ignore precedence
+   add tests
+
+3. Given the language from The Definitive ANTLR4 Reference and a visitor
+   to intepret it,
+   make a different visitor with the same structure as EvalVisitor
+
+   A. have it postfix expressions with one term or operation per line
+   If you have the unix dc tool, end by emitting a line with only the
+   letter p (for pop), pipe output of a simple expression program to dc.
+   If you don't have had dc, pipe output to the Python stack machine.
+
+   OR
+
+   B. have it use floating point numbers (make a version of CommonLexerRules.g4
+   that allows those)
+   add tests
+
+4. Given an interpretter which uses Node objects,
+   A. factor out the symbol table behavior into a separate class with tests
+   B. Find the line number inside each *Context object and record it in the
+      nodes. This will allow us to report line numbers in errors later.
+
+5. Given an interpretter which uses Node objects,
+   1. Add the ConditionalNode, IfNode, and WhileNode
+   2. Adjust EvalVistor to use these new nodes for the new productions in the grammar
+   add tests for the new code
+
+Extensions.
+A. Fix the bug that keeps this from parsing:
+       8-9
+   You need to remove the option of a minus sign as part of a number
+   in favor of a new unary minus operator with higher precedence than
+   all the other operators we have seen.
+
+B. Add an exponentiation operator using symbol ^.
+
+C. Add a type system that allows expressions to compute with
+   ints and floats. Require each variable to be either an int or a float.
+   Enforce that during operations.
+
+D. Add functions and function calls with parameters (if you did
+   C, you should insist on parameters having type int or float and
+   enforce those requirements for the arguments provided at run time).
+
+E. Choose any version of the Expr.g4 grammar and corresponding
+   code, emit assembly for your platform which will successfully assemble
+   and run.
+
+Misc. (if Extensions prove too difficult)
+1. Write a grammar to parse JSON or a subset of it.
+2. Design a language for expressing class heirarchies. Write a
+   grammar for the language. Write an implementation that emits
+   dot digraph source code.
+3. Design a language that takes descriptions of ASCII art and produces them.
+   Example:
+       ' ' x 34, 'x' x 3, 'i' x 9 NEWLINE
+4. Convert markdown, as used on github and other sites, to HTML.
