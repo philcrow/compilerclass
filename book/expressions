@@ -1,4 +1,4 @@
-\chapter{Multiplying}
+\chapter{Expressions}
 
 In the last chapter we made a grammar for antlr which generated
 a listener model so we could implement out language that adds
