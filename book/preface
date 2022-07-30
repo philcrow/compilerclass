@@ -1,0 +1,26 @@
+There are usually two sides to technology: using it and working on it.
+Loosely, I call this driver's ed vs. auto shop. In the former we learn
+to operate a car: parking, signaling, turning, minding the rules of the
+road. In the latter we would learn to repair the various systems on
+a car. Notice I say ``would learn.'' I've never taken auto shop. My
+repair skills are limited. This is typical. More people need to know
+how to operate a car than need to know how to work on it.
+
+For the expert, shop is more interesting. The temptation to fixate on it
+is strong. This definitely holds for books and courses about compilers.
+This book takes the driver's ed approach exclusively. It is completely
+distinterested in how finite automata and context free grammars work
+theoretically and how they are implemented. Our goal will be to use
+tools to make languages.
+
+The main tool of this course is ANTLR4 which was written by Terence Parr.
+He wrote an excellent book about it called The Definitive ANTLR4 Reference.
+You will probably want to consult that, or the various forms of online
+documentation including especially antlr.org.
+
+You can use ANTLR4 with various languages including C, C#, JavaScript,
+and Python. Here we will use Java for the simple fact that I know
+it well enough. If you are going to follow along, choose a language
+that is comfortable for you.
+
+Let's get started.

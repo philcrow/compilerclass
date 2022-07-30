@@ -1,0 +1,367 @@
+\chapter{Adding Digits}
+
+Let's start with the simplest language I could think of. It will
+add single digit integers. From this we will see quite a bit of
+antlr. As we go, we'll add more features.
+
+\section{A Program}
+
+If we put this program into a text file:
+
+    4+5
+
+we want our end result to be 9 printed on the screen.
+
+\section{Structure}
+
+Tidiness is essential for builing software. It is also more or less
+enforced by tools like gradle. Gradle has a standard structure for
+the directories where input files live. It is best not to fight the tool.
+
+First make a directory for the work we are about to begin. I'll call mine
+app. Then make this structure under that:
+
+    app
+    └── src
+        ├── main
+        │   ├── antlr
+        │   └── java
+        └── test
+            └── java
+
+In the app directory, place a build.gradle file. You can use mine.
+Look for me on github (https://github.com/philcrow). Look for compilerclass.
+This book has sample code laid out as weeks in a class.
+Warning: some of the weeks cover quite a lot of ground, so week might
+be an optimistic term. Dig down to class.weeks/week1/app/build.gradle\footnote{
+https://github.com/philcrow/compilerclass/blob/main/class.weeks/week1/app/build.gradle}
+
+Notice that testing is going to be a key part of our effort. I'll feature
+it all along.
+
+Code that we feed to antlr will be under src/main/antlr. Code we write
+ourselves will be under src/main/java. Tests will be in src/test/java.
+I've chosen junit 4 for the tests, because I find it easier to configure
+and use. There are other testing frameworks, including junit 5 (jupiter).
+Choose one that suits you. But, do write tests. They save time in the end.
+
+\section{Steps}
+
+Now that we have places to put everything, we can start building a language.
+In compilation, the first step is to recognize the little bits and pieces
+that make up the language. These are called tokens. Once we know the
+tokens, we can try to recognize them with a grammar. If that works we
+will have a tree containing exactly what matched.
+
+\section{Three Steps in ANTLR}
+
+In antlr4, we can combine the tokens and the grammar rules in one file.
+As things become more complex this becomes cumbersome (or impossible).
+For now our we can create a single file called Calc.g4 under
+src/main/antlr with this content:
+
+    grammar Calc;
+    program : NUMBER '+' NUMBER ;
+    NUMBER : [0-9] ;
+
+As with Java, the name of the grammar on the first line (Calc) must
+match the file name (Calc.g4).
+
+There are two rules here. A NUMBER is a token (antlr knows this because
+we capitalized its name. All caps is a convention, capitalization is required.).
+You can define number in a lot of ways, all of the other ways will be
+more interesting that this.
+
+You specify the tokens with regular expressions. Use a search engine on
+that term if you need advice.
+
+Here, NUMBER is one of the numbers from 0 through 9. The brackets
+make a class of characters so we can write them compactly. Inside the
+brackets we can use a range, here 0-9. This will include all the
+characters between 0 and 9 in the ASCII chart.
+
+Each rule in anltr contains at least a name, a colon, a definition,
+and a semi-colon.
+
+Once we know what a number is, we can define a program in our language.
+The rule for a program is: one number, a literal plus sign, and another
+number. Again, the semi-colon is tell antlr that the rule is finished.
+
+To make our language, we run a few commands at a command prompt:
+
+    gradle build
+    cd build/classes/java/main
+    grun Calc program -gui -tokens -tree adder
+
+where adder is a text file with a legal program in our language like 4+5.
+You may notice errors when this runs. We have some issues to resolve.
+Thanfully, antlr is quite forgiving.
+
+This will not print 9. We have not yet implemented the last step: running
+the program. We have only parsed it.
+
+In the picture that grun generates you can see the tree as antlr built
+it from the grammar.
+
+       program
+         /|\
+        / | \
+       4  +  5
+
+This tells us that it saw a program. There are three elements to the
+program, each becomes a child node of the root program node. These
+are the tokens 4, +, and 5.
+
+\section{Using ANTLR's Tree}
+
+Above we asked grun to show us the tree that represents our program.
+What antlr actually built was a set of files. Gradle put everything
+antlr built in the bin directory. There are a lot of artifacts. If you
+want rid of them you can type
+
+    gradle clean
+
+That will remove the build directory.
+
+Under build, we are most interested in the code antlr made for us to
+use directly. This is found under
+
+    build/generated-src/antlr/main
+
+There we see both helper files (which are of little interest) and
+java files. The java files are
+
+    CalcBaseListener.java
+    CalcLexer.java
+    CalcListener.java
+    CalcParser.java
+
+Unless we are debugging problems with tokens, we won't need CalcLexer.
+The other three need some explanation.
+
+CalcListener.java is the interface for the tree listener. This will
+have an enter and an exit method for each rule in the grammar whose
+name starts with a lowercase letter (in other words everything but the
+tokens).
+
+When the grammar is complex, there are a lot of these methods. Implementing
+this interface could require us to implement a lot of methods we don't
+need. That is where CalcBaseListener.java enters. It implements the
+interface with methods that don't do anything. By subclassing that,
+we can override the methods we want and ignore the rest.
+
+I called my subclass Interpretter.java. An interpretter is a program
+the runs another program a line at a time. I initially created by copying
+from CalcBaseListener.java. Then I renamed things and removed unwanted
+things.
+
+    import org.antlr.v4.runtime.ParserRuleContext;
+    import org.antlr.v4.runtime.tree.ErrorNode;
+    import org.antlr.v4.runtime.tree.TerminalNode;
+    
+    import java.util.List;
+    
+    public class Interpretter extends CalcBaseListener {
+        int answer = 0;
+    
+        @Override
+        public void enterProgram(CalcParser.ProgramContext ctx) {
+            List<TerminalNode> numberNodes = ctx.NUMBER();
+            for (TerminalNode node : numberNodes) {
+                answer += Integer.valueOf(node.getText());
+            }
+        }
+    
+        public int getAnswer() {
+            return answer;
+        }
+    }
+
+I kept the imports from CalcBaseListener and added one for List, since
+there are two operands in one of our programs and antlr will deliver
+multiples in a list.
+
+Notice that exitProgram is not present. Don't implement methods that
+don't need to do anything.
+
+Each enter and exit method receives the ctx parameters which the
+parser made for the tokens. It is subtree for this node in the program
+tree. That is, it represents the children of the rule in the enter method
+name (program here).
+
+It is useful to peek in the parser to see what methods you can call
+on the context object. Look for the YourRuleContext class. Those
+are the methods you can call. (Your IDE will know this and might
+assist you.)
+
+In our case, we know there is a plus sign (which is not available
+since it is a required literal token). But, we are interested in
+what to add together.
+
+The methods are named from the grammar, so you can also use that
+instead of digging in CalcParser itself. Here we want NUMBER.
+Since there are two, we get a list.
+
+Once we know which numbers were in the program, we need to add them.
+You could stream here, but I've used an old school for-in loop instead.
+
+Notice a couple of things. First, there is an instance member called
+answer that is keeping track of the total. To see the answer, someone
+will need to call getAnswer. Later we will learn about the visitor
+pattern which makes this kind of answer collection both tidier and
+a lot more flexible.
+
+What remains is a driver to instantiate the Interpretter and invoke
+the proper methods to obtain the answer. We actually want to do that
+twice. Once for the operative code, so you can run programs. Once
+in a test file, so gradle can perform our tests repeatedly as we go.
+
+\section{Testing}
+
+Some advocate writing tests first. They call this test driven development.
+I find that a bit tedious, yet I know I want tests and write them as I
+go. In order to easily test code, you need to structure it in a certain
+way. This actually makes it easier to understand and maintain as a side
+effect. Write tests as you go. Life will be better.
+
+Even though I didn't write the test first, I'll show it first so you
+can see the structure of what we are doing.
+
+    import org.antlr.v4.runtime.*;
+    
+    import org.junit.*;
+    import static org.junit.Assert.*;
+    
+    public class RunnerTest {
+        @Test
+        public void interpretterTests() {
+            String program = "4+5";
+            CharStream input = CharStreams.fromString(program);
+            Runner runner = new Runner();
+            int answer = runner.run(input);
+            assertEquals(9, answer);
+        }
+    }
+
+There are includes for antlr, and junit. I'm using junit 4 since I have
+had an easier time configuring and using it. Feel free to use any
+other framework that suits your style.
+
+In junit 4, we label methods that should be run by the test harness
+with the @Test annotation. They should be public and void. After that,
+they can do anything any other java code does.
+
+This one starts by defining as complex a program as our current language
+can understand. Once we have a string containing the program text, we
+need to create a CharStream which antlr defines and expects. It is
+brought in with the import of org.antlr.v4.runtime.*.
+
+Runner is our class. It will have a run method that returns the answer
+for the supplied program. The last line asserts that the answer should be 9.
+We could add more tests. Some sad path (illegal syntax) tests would
+be in order here.
+
+\section{Driving}
+
+The Runner will take of collecting the program supplied by the user,
+passing it through the antlr processing methods, user our interpretter
+and print the answer.
+
+Again, the structure is helpful for testing. We don't want to just print
+the answer. That would require the test to collect standard input which
+is tedious at best.
+
+    import org.antlr.v4.runtime.*;
+    import org.antlr.v4.runtime.tree.*;
+    
+    public class Runner {
+        public int run(String fileName) throws Exception {
+            // 1. get the input into a stream from a file passed on command line
+            CharStream input  = CharStreams.fromFileName(fileName);
+            return run(input);
+        }
+    
+        public int run(CharStream input) {
+            // there are other ways to feed input, notably stdin
+            // CharStreams.fromStream(System.in);
+    
+            // 2. user the stream to construct the lexer
+            CalcLexer         lexer  = new CalcLexer(input);
+    
+            // 3. use the lexer to produce the token stream
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+    
+            // 4. use the token stream to construct the parser
+            CalcParser        parser = new CalcParser(tokens);
+    
+            // 5. tell the parser to start at the program rule
+            ParseTree         tree   = parser.program();
+    
+            // 6. make a walker that can visit the nodes in the AST
+            ParseTreeWalker   walker = new ParseTreeWalker();
+    
+            // Our custom code
+            Interpretter  interpretter = new Interpretter();
+            walker.walk(interpretter, tree);
+    
+            return interpretter.getAnswer();
+        }
+    
+        public static void main(String[] args) throws Exception {
+            String fileName = args[0];
+            Runner runner = new Runner();
+            int answer = runner.run(fileName);
+    
+            System.out.println( "answer: " + answer);
+        }
+    }
+
+In the main method, we expect the file name to be the only argument
+supplied when a user runs the program. That file needs to contain
+the program text. With the file name in hand, we can instantiate
+a Runner object and call the run method that expects a file name.
+When that returns, it will give us the answer to print.
+
+The run method which accepts a file name uses CharStreams just like
+the test did. Once it has a CharStream, it can call the other run
+method remembering to return the answer. This is delegation.
+
+The primary run method needs its input an a CharStream. It passes
+that to the antlr Lexer. That is used to make a CommonTokenStream
+which can be given to the parser. Once you have a parser, you can
+call any rule in it by name. Here we only have one rule: program.
+That makes the tree grun showed us earlier.
+
+For the listener approach, we create a ParseTreeWalker and give it
+our Intepretter (which must implement CalcListener) and the tree.
+That will perform the traversal by calling the various enter and
+exit methods.
+
+At the end, we need to ask the interpretter for that answer. With
+the listener approach, nothing is returned from the walk.
+
+\section{summary}
+
+We have now implemented one of the least useful languages in the
+history of computing. Along the way we have seen a regular
+expression to specify on digit integers, a grammar with only
+two tokens (NUMBER and +), how to build that into a set of
+really helpful code with antlr. Finally, we use the listener
+pattern to interpret our language into an answer. We did not
+forget to test.
+
+There are obvious shortcomings with the language. It might be nice
+to multiply, divide, or subtract. It might be nice to have numbers
+with more than one digit. For a genuine language, we will want
+flow of control, floating point numbers and other features.
+
+There were also bugs while running this example. We never told
+it what to do with whitespace.
+
+Exercises
+
+1. Add tests for input that won't work, see and verify errors.
+
+2. Expand the NUMBER token definition in the grammar to allow
+   multiple digits (try searching the web for regular expression).
+
