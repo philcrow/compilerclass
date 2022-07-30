@@ -365,3 +365,4 @@ Exercises
 2. Expand the NUMBER token definition in the grammar to allow
    multiple digits (try searching the web for regular expression).
 
+3. Expand the grammar and interpretter to handle multiplication.
