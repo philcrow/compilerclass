@@ -269,7 +269,7 @@ The runner shows how our new scheme works in outline:
         }
     }
 
-Everything above 'Our custom code' is as before. The differences begine with the call
+Everything above 'Our custom code' is as before. The differences begin with the call
 to visit. Now we are collecting the results in a variable called program which has type Node.
 Our Nodes will have an act method that runs them.
 

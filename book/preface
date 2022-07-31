@@ -4,7 +4,7 @@ to operate a car: parking, signaling, turning, minding the rules of the
 road. In the latter we would learn to repair the various systems on
 a car. Notice I say ``would learn.'' I've never taken auto shop. My
 repair skills are limited. This is typical. More people need to know
-how to operate a car than need to know how to work on it.
+how to operate a car than need to know how to work on one.
 
 For the expert, shop is more interesting. The temptation to fixate on it
 is strong. This definitely holds for books and courses about compilers.
@@ -12,6 +12,20 @@ This book takes the driver's ed approach exclusively. It is completely
 distinterested in how finite automata and context free grammars work
 theoretically and how they are implemented. Our goal will be to use
 tools to make languages.
+
+One of the important inovations in software development since the start
+of my career actually has nothing specifically to do with code. It is the
+agile process. One of the key concepts of agile development is the Minimum
+Viable Product (MVP). The idea is to build something that will run and
+deliver some value to the users. After it is in the users' hands, revisit
+the product to add features. That will be my approach here.
+
+We will start with the smallest language I could conceive. It will only add
+single digit integers. When it does so, it will always only print the
+result to standard out. Then we will commence adding features to this
+language. We will have variables, integer and floating point types -- including
+type checking, if/else and while, and functions. Even at the end
+we won't have a fully useful language, but we will have learned to build one.
 
 The main tool of this course is ANTLR4 which was written by Terence Parr.
 He wrote an excellent book about it called The Definitive ANTLR4 Reference.

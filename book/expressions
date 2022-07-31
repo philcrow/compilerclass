@@ -508,3 +508,6 @@ Exercises
    with decimal points (it's fine if the decimal point is required and
    there is no need to handle exponential notation common in many languages).
 
+3. Use the context object in the visitId method to retrieve include
+   the line number in the warning message when a variable is used without
+   assignment.
