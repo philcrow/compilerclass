@@ -30,6 +30,7 @@
 5. Given an interpretter which uses Node objects,
    1. Add the ConditionalNode, IfNode, and WhileNode
    2. Adjust EvalVistor to use these new nodes for the new productions in the grammar
+   3. Do this again for do/while.
    add tests for the new code
 
 Extensions.
