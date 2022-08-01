@@ -341,15 +341,15 @@ The other methods just repeat the same plan.
 \section{A Visiting Interpretter}
 
 When I asked antlr for the visitor pattern, it started making ExprVisitor
-and ExprBaseVisitor instead of the Listener and BaseListener. There are
+and ExprBaseVisitor instead of the Listener and BaseListener versions. There are
 quite a few differences. I've already mentioned that vistor methods
 return something. All of them must return the same type. For now that
 will be Integer.
 
 The key difference is that instead of magically calling enter and
 exit methods for each production, it will now make a single visit method
-which will decide whether to visit its children and if does that, it
-will control when to visit them. This is control at the expense of effort.
+which will decide whether to visit its children and if does that,
+control the order of those visits. This is control at the expense of effort.
 
 The easiest method is the one for INT.
 
@@ -368,12 +368,11 @@ only has one type, we don't need anything more than a map.
     Map<String, Integer> symbolTable = new HashMap<>();
 
 Note that I avoided the need for an explicit constructor by building
-an empty hash map during assignment.
+an empty hash map while declaring this.
 
-There are two productions that use this table: assign and ID. The ID visit
-method will fail if the variable is not in the table. That is, you must
-assign the variable first. This prevents errors (misspelled variable,
-failure to give a value, to name two).
+There are two productions that use this table: assign and ID. The visitId
+method will complain if the variable is not in the table. That is, you ought
+to assign a value to the variable first.
 
     @Override
     public Integer visitId(ExprParser.IdContext ctx) {
@@ -392,7 +391,9 @@ You have to decide how you want to handle errors. It would certainly
 be appropriate to throw and exception here instead of merely warning
 and substituting zero. Java would definitely throw (or possibly fail
 to compile). Perl without strict mode would warn and use zero. These
-are choices for you as the language designer.
+are choices for you as the language designer. Most designers prefer to
+throw, because that prevents errors (misspelled variable, failure to
+give a value, to name two).
 
 The assign method puts variables into the table.
 
@@ -408,12 +409,12 @@ The assign method puts variables into the table.
 Here we finally see the need to visit the children instead of just looking
 up the lexemes in the tokens\footnote{A token is the thing defined in the grammar
 like ID. A lexeme is the text in the program that was recognized as one of those
-like x.}.
+like aVarName.}.
 
 First, we lookup the name as we did in visitId. Then, we visit the expression
 child, which could be a complicated computation. Finally, we record those
 in the symbol table. The return value is not used here. We don't have
-a visitProgram, to no one is storing this return value. I just prefer not
+a visitProgram, so no one is storing this return value. I just prefer not
 to return nulls.
 
 Print and parentheses are similar and straightforward. They just need the
@@ -437,7 +438,7 @@ explicitly calls visit (inherited) passing it the child to visit.
 Again this allows us full control of the order of visiting the children.
 
 The only other methods are for the binary operations. There are two
-of these (remember the rule: one visit method per production).
+of these (antlr's rule: one visit method per named production).
 
     @Override
     public Integer visitMulDiv(ExprParser.MulDivContext ctx) {
@@ -465,7 +466,7 @@ of these (remember the rule: one visit method per production).
         }
     }
 
-Remember that in the grammar we named the literal token for the operator
+In the grammar we named the literal token for the operator
 as op. That becomes a field (not a method) of the context object.
 All of these visit the left child, then the right child. Then they use
 the op field to discover which operation the parser saw. After that

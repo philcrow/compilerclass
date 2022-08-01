@@ -1,0 +1,334 @@
+\chapter{Flow of Control}
+
+There are a lot of structures in modern languages for flow of control.
+There are loops. C has the three statement for. Java has that and a
+variant which allows iteration over a collection. Many languages
+have while to loop until their condition is false. Some have the
+variant do/while which always runs the loop once, then begins
+checking the condition. Practially every language has if/else.
+A lot of languages have switch variant which is basically a syntactic
+abbreviation of a set of ifs. There are even more choices.
+
+We will stick our theme of keeping things simple. Our language will
+have one loop: while, and if/else (but not else if).
+
+\section{Grammar Update for If and While}
+
+At core, both if and while have a condition. If runs its block once
+if the condition holds and the else block once if now. While does
+the same conditional check, but repeatedly runs the block until the
+check is false. In way, they are variations on the theme.
+
+We'll implement the conditional first.
+
+The COMPARISON token is a list of all those alligators from grade school Math
+with a couple of others thrown in.
+
+    COMPARISON : '==' | '!=' | '<' | '>' | '<=' | '>=' ;
+
+With that token added to our common lexer rules, we can define the rule.
+
+    conditional : expr compare=COMPARISON expr ;
+
+Our conditionals will compare two expressions. Notice that I have named
+the comparison that actually matches as compare for use in our code.
+
+Now we can add if and while statement productions.
+
+    statement : 'print' expr NEWLINE                    # printExpr
+              | ID '=' expr NEWLINE                     # assign
+              | 'if' '(' conditional ')' block else?    # ifStatement
+              | 'while' '(' conditional ')' block       # whileStatement
+              | NEWLINE                                 # blank
+              ;
+
+Note how similar the if and while structures are. The blocks are required. Else
+is optional. We are not supporting else if. Feel free to add that.
+
+    else : 'else' block ;
+
+By having a separate rule for else, we just have a tidier grammar. We could have
+included this in-line with the if production:
+
+    | 'if' '(' conditional ')' block ('else' block)?
+
+That's more cumbersome and becomes prohibitive if the else rule allows else if.
+
+We will require braces (because you really should always use them, unless you
+use Python).
+
+    block : '{' statement* '}' NEWLINE? ;
+
+The statements are optional. If the user wants to do nothing, who are we to complain?
+The newline is also optional after a brace so that people can write with cuddled braces.
+
+    if (x < 5) {
+        y = 2
+    } else {
+        y = 4
+    }
+
+I don't prefer that style, but I can support with a question mark. I am to please.
+But, we can't actually let the user have an if on a single line, since the other
+statements use newlines as terminators. Language designers spend a lot of time
+pondering details like these.
+
+\section{Nodes for Conditionals, If, and While}
+
+We need three new nodes for our internal tree. The others will need to help out
+by expanding to accomodate a new method. The new nodes are IfNode, WhileNode,
+and ConditionalNode.
+
+The new method in Node.java is
+
+    public abstract boolean getBooleanValue();
+
+Only the ConditionalNode will implement this in a meaningful way. The others
+will have to come along for the ride. This is a theme of internal trees: uniformity
+of structure with plenty of unused elements.
+
+    public class ConditionalNode extends Node {
+        Node left;
+        String comparitor;
+        Node right;
+    
+        public ConditionalNode(Node left, String comparitor, Node right) {
+            this.left = left;
+            this.comparitor = comparitor;
+            this.right = right;
+        }
+    
+        @Override
+        public void act() {
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return getBooleanValue() ? 1 : 0;
+        }
+    
+        @Override
+        public boolean getBooleanValue() {
+            Integer leftValue = left.getIntValue();
+            Integer rightValue = right.getIntValue();
+    
+            switch (comparitor) {
+                case "==" :
+                    return leftValue == rightValue;
+                case "!=" :
+                    return leftValue != rightValue;
+                case "<" :
+                    return leftValue < rightValue;
+                case ">" :
+                    return leftValue > rightValue;
+                case "<=" :
+                    return leftValue <= rightValue;
+                case ">=" :
+                    return leftValue >= rightValue;
+            }
+            return false; // unreachable, parser would have caught illegal comparitor
+        }
+    }
+
+When the visitor builds one of these nodes, it will pass in the left and right
+expressions nodes along with the literal comparison operator. The getBooleanValue
+method uses a switch on that to pick the right comparison operation.
+All of the other nodes can return true or false as they wish. They cannot
+legally appear in an if or while condition. In some languages they could (like Perl).
+Then they would need to decide what truth means for them.
+
+    public class IfNode extends Node {
+        Node conditional;
+        Node thenBlock;
+        Node elseBlock;
+    
+        public IfNode(Node conditional, Node thenBlock, Node elseBlock) {
+            this.conditional = conditional;
+            this.thenBlock = thenBlock;
+            this.elseBlock = elseBlock;
+        }
+    
+        @Override
+        public void act() {
+            if (getBooleanValue()) {
+                thenBlock.act();
+            }
+            else if (elseBlock != null) {
+                elseBlock.act();
+            }
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return conditional.getIntValue();
+        }
+    
+        @Override
+        public boolean getBooleanValue() {
+            return conditional.getBooleanValue();
+        }
+    }
+
+If statements have a condtional, a then block, and an optional else block.
+To act, an if statement evaluates it conditional. If it is true, it runs the
+then block. Otherwise, it runs the else block, but only if there is one.
+
+You might be thinking that I missed a node. What about the block? That is
+just a list of statements. We already have ProgramNode for that. I block
+is just a miny program that only runs under the control of some other statement.
+
+    public class WhileNode extends Node {
+        Node conditional;
+        Node block;
+    
+        public WhileNode(Node conditional, Node block) {
+            this.conditional = conditional;
+            this.block = block;
+        }
+    
+        @Override
+        public void act() {
+            while (getBooleanValue()) {
+                block.act();
+            }
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return conditional.getIntValue();
+        }
+    
+        @Override
+        public boolean getBooleanValue() {
+            return conditional.getBooleanValue();
+        }
+    }
+
+A while node is strikinginly similar to an if node. The difference is that
+it has only one block and it keeps running it until the condition is false.
+
+\section{Adjustments to the Visitor}
+
+I mentioned earlier that we can reuse the ProgramNode for blocks. We do need to
+make some adjustments. Namely, we need to pull the code out of the visitProgram
+method into a helper that visitBlock can share.
+In EvalVisitor
+
+    @Override
+    public Node visitProgram(ExprParser.ProgramContext ctx) {
+        return buildProgramNode(ctx.statement());
+    }
+
+    private Node buildProgramNode(List<ExprParser.StatementContext> parserStatements) {
+        List<Node> programStatements = new ArrayList<>();
+        for (ExprParser.StatementContext statement : parserStatements) {
+            Node programStatement = visit(statement);
+            if (programStatement != null) {
+                programStatements.add(programStatement);
+            }
+        }
+        return new ProgramNode(programStatements);
+    }
+
+    // ...
+    @Override
+    public Node visitBlock(ExprParser.BlockContext ctx) {
+        return buildProgramNode(ctx.statement());
+    }
+
+The other changes in EvalVisitor are visit methods to build the new nodes.
+
+    @Override
+    public Node visitIfStatement(ExprParser.IfStatementContext ctx) {
+        Node conditional = visit(ctx.conditional());
+        Node thenBlock = visit(ctx.block());
+        Node elseBlock = null;
+
+        if (ctx.else_() != null) {
+            elseBlock = visit(ctx.else_());
+        }
+
+        return new IfNode(conditional, thenBlock, elseBlock);
+    }
+
+Since else is marked optional in the grammar (with the question mark), antlr
+names its lookup method with a trailing underscore: else_. We need to make
+sure this is not null before visiting it. It is fine to give the IfNode constructor
+a null for the else block, it checks for that before trying to run it.
+
+Else has its own rule, so we need to implement its visit method.
+
+    @Override
+    public Node visitElse(ExprParser.ElseContext ctx) {
+        return visit(ctx.block());
+    }
+
+Remember that we don't visit it if it didn't collect anything. We only need
+to check in visitIf.
+
+Because while statements have only a required block, their visit method is simpler.
+
+    @Override
+    public Node visitWhileStatement(ExprParser.WhileStatementContext ctx) {
+        Node conditional = visit(ctx.conditional());
+        Node block = visit(ctx.block());
+
+        return new WhileNode(conditional, block);
+    }
+
+Merely visit the children and pass their nodes to the constructor.
+
+Finally, we need visitConditional.
+
+    @Override
+    public Node visitConditional(ExprParser.ConditionalContext ctx) {
+        String comparitor = ctx.compare.getText();
+        Node left = visit(ctx.expr(0));
+        Node right = visit(ctx.expr(1));
+
+        return new ConditionalNode(left, comparitor, right);
+    }
+
+That's a lot like a simpler version of visitAddSub. All we need to do is collect
+the values from the children and pass them to the ConditionalNode constructor.
+
+\section{Summary}
+
+Now we can run programs like this one that calculates overtime pay.
+
+    hrs = 42
+    rate = 10
+    pay = 0
+
+    if (hrs < 40) {
+        pay = hrs * rate
+    }
+    else {
+        pay = 40 * rate + (hrs - 40) * rate * 3 / 2
+    }
+
+    print pay
+
+This figures pay with time and a half for overtime. Note that we
+cannot multiply by 1.5 because we don's support floating point math.
+
+Even though we can't print ``Lift Off!'' because we don't support strings,
+we can count down.
+
+    x = 10
+
+    while (x > 0) {
+        print x
+        x = x - 1
+    }
+
+Exercises
+
+1. Factor out the symbol into its own class. Adjust the Node classes that were
+   receiving EvalVisitor in order to use the symbol table so they use the new class.
+
+2. Add a do/while statement which always runs its block once, but then
+   begins checking the conditional to decide whether to run again.
+
+3. Add else if to the grammar. Feel free to introduce a token for this like
+   elif (used in Pyton) or elsif (used in Perl).
