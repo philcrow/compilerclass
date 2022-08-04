@@ -322,13 +322,71 @@ we can count down.
         x = x - 1
     }
 
+\section{Testing Programs in Files}
+
+We want to be able to test programs like these. There are lots of things
+that we could test. We could build the Node tree by calling visit on
+an EvalVisitor object. I'm going to check the final value of the interesting
+variables.
+
+Step one is to create
+
+    src/test/resources/conditional.program
+
+with the contents of the overtime pay calculation above.
+
+Then, run that program in a test. Finally, verify that the calculated
+pay is 430.
+
+    import org.antlr.v4.runtime.*;
+    import org.antlr.v4.runtime.tree.*;
+    
+    import org.apache.commons.io.IOUtils;
+    
+    import org.junit.*;
+    import static org.junit.Assert.*;
+    
+    public class EvalVisitorTest {
+        @Test
+        public void ifTest() throws Exception {
+            String program = IOUtils.toString(
+                this.getClass().getResourceAsStream("conditional.program"),
+                "UTF-8"
+            );
+            CharStream        input  = CharStreams.fromString(program);
+            ExprLexer         lexer  = new ExprLexer(input);
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            ExprParser        parser = new ExprParser(tokens);
+            ParseTree         tree   = parser.program();
+    
+            EvalVisitor eval = new EvalVisitor();
+            Node nodeTree = eval.visit(tree);
+            nodeTree.act();
+    
+            assertEquals(Integer.valueOf(430), eval.resolve("pay"));
+        }
+    }
+
+We need the same imports as the Runner. IOUtils makes it easy to
+ingest the program file from the test resources directory. In the
+test, getResourceAsStream will look in src/test/resources for the file
+by name.
+
+Everything after that is just like the Runner run method until we
+reach the assertion. Then we require that 430 be the value in the
+symbol table for the pay variable.
+
 Exercises
 
 1. Factor out the symbol into its own class. Adjust the Node classes that were
-   receiving EvalVisitor in order to use the symbol table so they use the new class.
+   receiving EvalVisitor in order to use the symbol table so they use the new
+   class. Adjust the test of overtime pay so it can still inspect the final
+   answer.
 
 2. Add a do/while statement which always runs its block once, but then
    begins checking the conditional to decide whether to run again.
+   Add a test to check at least one example of while or do/while.
 
 3. Add else if to the grammar. Feel free to introduce a token for this like
    elif (used in Pyton) or elsif (used in Perl).
+   Add a test with at least on else if structure.

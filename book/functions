@@ -1,0 +1,137 @@
+\chapter{Functions}
+
+Functions take input parameters and return values. In some languages
+these are called methods, usually because they receive an implicit
+object as a parameter. Other languages have similar constructs called
+procedures (which don't return values).
+
+Functions are important. They allow us to factor out bits of code
+to make things easier to read and to test. They also make code
+available to be re-used.
+
+Let's make the overtime pay calculation from the flow of control
+chapter into a function. Then it might look something like this:
+
+    function calcpay(hrs, rate) {
+        pay = 0
+        if (hrs < 40) {
+            pay = hrs * rate
+        }
+        else {
+            pay = 40 * rate + (hrs - 40) * rate * 3 / 2
+        }
+        return pay
+    }
+
+    paybob = calcpay(43, 10)
+    print paybob
+
+    payjan = calcpay(41, 12)
+    print payjan
+
+There are quite a few pieces to this function scheme. First, there
+is a function definition including the function keyword, the function's
+name, a parameter list, and a block.
+
+Inside the block the parameters are visible in a scoped symbol
+table that cannot be accessed outside of the function. For instance
+pay is not defined unless we are in the function block.
+
+There is a new return statement only valid in the block of a function.
+
+Finally, there is a way to call the function. Here we give its name
+and put arguments for its formal parameters inside parentheses.
+
+All of this would be even more complicated if our language supported
+types.
+
+\section{Grammar Additions}
+
+We have two new statement alternatives.
+
+    statement : ...
+              | 'function' ID '(' paramList? ')' block  # functionDefinition
+              | 'return' expr NEWLINE                   # return
+              ...
+
+The paramList needs a rule. It's already optional, so we need two
+choices.
+
+    paramList : ID ',' paramList
+              | ID
+              ;
+
+The lexemes for these ID tokens will only be available inside the function.
+
+Finally, we need a call expression.
+
+    expr : ...
+         | ID '(' exprList? ')'         # call
+
+An expression list is like a parameter list, but parameters define
+names and expressions provide values.
+
+    exprList : expr ',' exprList
+             | expr
+             ;
+
+\section{New Nodes}
+
+We have two new statement productions: functionDefinition and return.
+These need nodes. So does the call expr.
+
+\subsecion{ReturnNode}
+
+Since return needs to affect the flow of control, we need a new scheme.
+If we had statements with addresses in the memory of an assembly program,
+we would record the address of the call. Then return would consume that,
+and set the program pointer to that spot. The main driver would then
+advance to the next statement as if the call was something simpler.
+
+Our scheme is a bit more vexing. One solution is to throw an exception.
+Then whoever invoked the act method on the function block would have
+to catch that. We could either put the return value in the exception,
+or place it into a special spot in the caller's symbol table. I chose
+the latter.
+
+It isn't always catch a named (aka checked) Java exception.
+But, it always a good idea to use a name when throwing.
+
+    public class ReturnEncounteredException extends RuntimeException {}
+
+That lets us end a block immediately upon seeing a return statement.
+The caller must then retrieve the return value and reset the symbol tables.
+
+    public class ReturnNode extends Node {
+        // the name of the return symbol is chosen to be an illegal identifier
+        public static final String RETURN_SYMBOL = "1_return_symbol";
+        Node valueNode;
+        EvalVisitor visitor;
+    
+        public ReturnNode(Node valueNode, EvalVisitor visitor) {
+            this.valueNode = valueNode;
+            this.visitor = visitor;
+        }
+    
+        @Override
+        public void act() {
+            Integer intValue = getIntValue();
+            visitor.set(RETURN_SYMBOL, intValue);
+            throw new ReturnEncounteredException();
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            return valueNode.getIntValue();
+        }
+    
+        @Override
+        public boolean getBooleanValue() {
+            return getIntValue() != 0;
+        }
+    }
+
+This is very similar to AssignNode. The differences are that it puts
+its value into an illegal spot in the symbol table and then throws.
+
+\subsection{FunctionNode}

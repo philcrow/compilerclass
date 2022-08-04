@@ -1,0 +1,7 @@
+The original week 5 covers adding floating point support.
+That requires a type system now that variables can be either
+int or float.
+
+Types compilcate functions. So, this alternative introduces
+functions before types are introduced. In this form, the language
+is still solely for integers.
