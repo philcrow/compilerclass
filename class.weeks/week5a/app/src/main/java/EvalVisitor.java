@@ -91,11 +91,10 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
         List<String> parameters = collectParameters(ctx.paramList());
         Node body = visit(ctx.block());
 
-        FunctionNode answer = new FunctionNode(parameters, body);
         String functionName = ctx.ID().getText();
-        setFunction(functionName, answer);
+        setFunction(functionName, new FunctionNode(parameters, body));
 
-        return answer;
+        return null;
     }
 
     private List<String> collectParameters(ExprParser.ParamListContext ctx) {
