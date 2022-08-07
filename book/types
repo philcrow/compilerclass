@@ -1,0 +1,134 @@
+\chapter{Types}
+
+So far our language has only worked with integers. This is
+an obvious problem. It would be more useful if it worked
+exclusively with floating point numbers. That would still
+leave it limited. It is time to talk about types.
+
+We actually introduced a parallel type for functions in
+the last chapter. Anything with a name resolved at runtime
+could be part of the type system. Leaving functions separate
+will make our lives easier. You could pursue a third
+category with a separate system to handle floating point
+numbers. The problem is that the arithmetic operators
+are shared by integer and floating point math.
+
+Some language introduce new operators to simplify the type
+system. Perl has separate comparison operators for strings
+and a separate symbol for concatentation, reserving the
+plus sign for actual Math.
+
+If a single operator will work with two disperate kinds
+of data, you need it as part of a type system.
+
+Our type system will facilitate the arithmetic for
+integers and floats.
+
+\section{Floating Point Numbers}
+
+As a first step we need to define what we mean by a floating
+point number, meaning how we will recognize it with a token.
+Here are some of the things we want to be floating point numbers:
+
+    1.2
+    0.2
+    45.
+    .15
+
+For now, we'll avoid numbers that need exponents. Many languages
+including things like 6.02e23. We'll leave that as an exercise.
+We could allow negative versions of these as well. But see
+the section on Unary Negation in the Odds and Ends chapter
+for what we really need to do.
+
+When you have lots of choices you should immeidately think
+of the work alternative and its operator |. We have use that
+extensively in grammars. It works in regular expressions too.
+Let me list the pieces along with what they match. Then,
+we'll combine them.
+
+    To Match   Use                     In English
+    .15        '.' [0-9]+              a dot, then one or more digits
+    0.2        '0' '.' [0-9]+          a zero, a dot, and one or more digits
+    14.12      [1-9][0-9]* '.' [0-9]*  any digit by zero, any number of digits,
+    45.                                a dot, more optional digits
+
+Putting these together we have a new lexer definition:
+
+    FLOAT: '-'? ( '.' [0-9]+ | '0' '.' [0-9]+ | [1-9][0-9]* '.' [0-9]* )
+
+For now, we'll keep the possibiity of the numbers themselves being
+negative. (Again, we really need unary negation.) Also, we have
+not limits here. At some point during compilation, we need to notice
+if a literal number is two big to fit in storage and raise an exception.
+We also need to report a good error if runtime computations result
+in a number that is too big for storage.
+
+Once we have a definition of what will count as a floating point
+number, it is trivial to add them to the grammar. It is just another
+expression alternative.
+
+    expr : ...
+         | FLOAT        # float
+
+This adds a visitFloat method to the parse tree walk.
+
+\section{A Simple Type System}
+
+Naively allowing FLOATs as expressions will not work. We need to make
+structural changes to the grammar and later to the parse tree walker,
+symbol table, and nodes.
+
+First, variables will need a type. This is foundational. When we first
+encounter a variable, the programmer must tell us the type. Many languages
+allow this type in a bare declaration. Java does this. It invites the
+developer to use undefined variables, resulting in an error. Java calls
+this a null pointer exception. You could prevent that by requiring
+assignment during declaration. I will follow Java's garden path to
+see how we need to report those errors later.
+
+In addition to typing variables, we need types in two other places.
+First, in the parameters to functions. Second, for the return values
+of those functions. Here is the new definition of statement:
+
+    statement : 'print' expr NEWLINE                            # printExpr
+              | type ID NEWLINE                                 # declare
+              | type ID '=' expr NEWLINE                        # declareAssign
+              | ID '=' expr NEWLINE                             # assign
+              | 'if' '(' conditional ')' block else?            # ifStatement
+              | 'while' '(' conditional ')' block               # whileStatement
+              | 'function' ID '(' paramList? ')' ':' type block # functionDefiniton
+              | 'return' expr                                   # return
+              | NEWLINE                                         # blank
+              ;
+
+There are two new statement alternatives. One for bare declaration. One for
+declaration with assignment. The function alternative has a new ':' type
+addition for the return value.
+
+    type : 'int' | 'float' ;
+
+I chose the familar int and float types. They may confuse the Java developer
+since float will be implemented with Double. Since we are implementing in
+Java that will simplify everything, since Double is the default float type
+there. Unless we wanted to implement our own libraries to do the actual
+calculations (or emit careful assembly) there is no use to fighting this.
+
+The final alteration to the grammar is in the definition of paramList.
+Now that parameters need a type, they need a rule.
+
+    paramList : param ',' paramList
+              | param
+              ;
+
+    param : type ID ;
+
+\section{Nodes}
+\section{Symbol Tables}
+
+Exercises
+
+. Expand the alternatives in the regular expression for FLOAT to
+  allow exponents. A lot of languages use the same notation.
+  Visit https://www.json.org to see all the options. Keep in mind
+  that in JSON number includes integers. Avoid those cases.
