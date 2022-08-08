@@ -9,6 +9,16 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
 
     // Helpers
 
+    /**
+     * Puts a symbol into the table without value.
+     * To give a value to symbol, call one of the setValue methods.
+     */
+    public Symbol declare(String type, String id) {
+        Symbol newSymbol = Symbol.getInstance(type, id);
+        symbols.set(id, newSymbol);
+        return newSymbol;
+    }
+
     public Symbol resolve(String name) {
         return symbols.resolve(name);
     }
@@ -82,16 +92,6 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
 
         declare(type, id);
         return new AssignNode(id, valueNode, this);
-    }
-
-    /**
-     * Puts a symbol into the table without value.
-     * To give a value to symbol, call one of the setValue methods.
-     */
-    public Symbol declare(String type, String id) {
-        Symbol newSymbol = Symbol.getInstance(type, id);
-        symbols.set(id, newSymbol);
-        return newSymbol;
     }
 
     @Override

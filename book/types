@@ -7,27 +7,29 @@ leave it limited. It is time to talk about types.
 
 We actually introduced a parallel type for functions in
 the last chapter. Anything with a name resolved at runtime
-could be part of the type system. Leaving functions separate
-will make our lives easier. You could pursue a third
-category with a separate system to handle floating point
-numbers. The problem is that the arithmetic operators
-are shared by integer and floating point math.
+should be part of a single type system. Leaving functions separate
+seemed to make our lives easier. Now we will incorporate
+them into the type system along with ints and floats.
+
+We couldn't expand the scheme of making a separate symbol
+for floating point numbers, like we initially did for functions.
+The problem is that the arithmetic operators
+are shared by integer and floating point math. Since
+those two must share, we should make a comprehensive
+system for all symbols.
 
 Some language introduce new operators to simplify the type
 system. Perl has separate comparison operators for strings
 and a separate symbol for concatentation, reserving the
-plus sign for actual Math.
-
+plus sign for actual Math. But, addition of numbers still
+works with both ints and floats.
 If a single operator will work with two disperate kinds
-of data, you need it as part of a type system.
-
-Our type system will facilitate the arithmetic for
-integers and floats.
+of data, you must make it part of a type system.
 
 \section{Floating Point Numbers}
 
 As a first step we need to define what we mean by a floating
-point number, meaning how we will recognize it with a token.
+point number. How we will recognize it with a token?
 Here are some of the things we want to be floating point numbers:
 
     1.2
@@ -36,13 +38,13 @@ Here are some of the things we want to be floating point numbers:
     .15
 
 For now, we'll avoid numbers that need exponents. Many languages
-including things like 6.02e23. We'll leave that as an exercise.
+include things like 6.02e23. We'll leave that as an exercise.
 We could allow negative versions of these as well. But see
 the section on Unary Negation in the Odds and Ends chapter
 for what we really need to do.
 
 When you have lots of choices you should immeidately think
-of the work alternative and its operator |. We have use that
+of the as alternative operator: |. We have used that
 extensively in grammars. It works in regular expressions too.
 Let me list the pieces along with what they match. Then,
 we'll combine them.
@@ -59,9 +61,9 @@ Putting these together we have a new lexer definition:
 
 For now, we'll keep the possibiity of the numbers themselves being
 negative. (Again, we really need unary negation.) Also, we have
-not limits here. At some point during compilation, we need to notice
+no limits here. At some point during compilation, we need to notice
 if a literal number is two big to fit in storage and raise an exception.
-We also need to report a good error if runtime computations result
+We also need to report an error if runtime computations result
 in a number that is too big for storage.
 
 Once we have a definition of what will count as a floating point
@@ -71,7 +73,8 @@ expression alternative.
     expr : ...
          | FLOAT        # float
 
-This adds a visitFloat method to the parse tree walk.
+This adds a visitFloat method to the parse tree walk. We'll need FloatNode
+to go with that.
 
 \section{A Simple Type System}
 
@@ -102,17 +105,21 @@ of those functions. Here is the new definition of statement:
               | NEWLINE                                         # blank
               ;
 
-There are two new statement alternatives. One for bare declaration. One for
+There are two new statement alternatives: one for bare declaration, one for
 declaration with assignment. The function alternative has a new ':' type
-addition for the return value.
+addition for the return value. You could choose to use the Java approach
+instead, by listing the type before the function name.
 
     type : 'int' | 'float' ;
 
-I chose the familar int and float types. They may confuse the Java developer
-since float will be implemented with Double. Since we are implementing in
+I chose the familar int and float types. They may confuse the Java developer,
+because float will be implemented with Double. Since we are implementing in
 Java that will simplify everything, since Double is the default float type
 there. Unless we wanted to implement our own libraries to do the actual
 calculations (or emit careful assembly) there is no use to fighting this.
+
+Note that function does not appear in the type rule. We only allow
+proper definitions with parameter lists.
 
 The final alteration to the grammar is in the definition of paramList.
 Now that parameters need a type, they need a rule.
@@ -123,8 +130,275 @@ Now that parameters need a type, they need a rule.
 
     param : type ID ;
 
-\section{Nodes}
+\section{Symbols}
+
+With symbols that have types, we need a class to describe them. Like Nodes,
+each type of symbol will inherit from this abstract class.
+
+    public abstract class Symbol {
+        String name;
+        SymbolType type;
+    
+        public Symbol(String name, SymbolType type) {
+            this.name = name;
+            this.type = type;
+        }
+    
+        public static Symbol getInstance(String typeName, String symbolName) {
+            Symbol answer = null;
+    
+            switch (typeName) {
+                case "int" :
+                    return new IntSymbol(symbolName);
+                case "float" :
+                    return new FloatSymbol(symbolName);
+                case "function" :
+                    return new FunctionSymbol(symbolName);
+            }
+    
+            return answer; // unreachable, the grammar will insist on a valid choice
+        }
+    
+        public abstract Integer getIntValue();
+        public abstract Double getFloatValue();
+        public abstract FunctionNode getFunctionValue();
+        public abstract void setIntValue(Integer newValue);
+        public abstract void setFloatValue(Double newValue);
+        public abstract void setFunctionValue(FunctionNode functionValue);
+    
+        public String getName() {
+            return name;
+        }
+    
+        public SymbolType getType() {
+            return type;
+        }
+    
+        public enum SymbolType {
+            INT,
+            FLOAT,
+            FUNCTION
+        }
+    }
+
+At the bottom is the SymbolType. We make an entry there for
+each type. The core facts of all symbols are then a name and a type.
+This they share in the common parent class.
+There are accessors for those attributes.
+
+The subclass instances will know their values. They have accessors for
+those values. If the type cannot meaningfully deliver one of the values,
+it will throw an exception. If it has a choice, it should try to respond
+with a good value. In particular, when an int is asked for a float
+value, it should return its value as a float.
+
+There is a factory here to create instances of the proper type. This
+saves the main parse tree visitor from having to do that. There are
+other reasonable designs.
+
+The subclasses themselves are really just houses for a value.
+Here is the class for ints. The others are similar.
+
+    public class IntSymbol extends Symbol {
+        Integer value;
+    
+        public IntSymbol(String name) {
+            super(name, Symbol.SymbolType.INT);
+        }
+    
+        public Integer getIntValue() {
+            if (value == null) {
+                throw new RuntimeException("Symbol '" + getName() +
+                    "' used before definition");
+            }
+            return value;
+        }
+    
+        public Double getFloatValue() {
+            return Double.valueOf(value);
+        }
+    
+        public FunctionNode getFunctionValue() {
+            throw new RuntimeException("Symbol '" + getName() +
+                "' is an int which cannot return a float");
+        }
+    
+        public void setIntValue(Integer newValue) {
+            value = newValue;
+        }
+    
+        public void setFloatValue(Double newValue) {
+            throw new RuntimeException("Symbol '" + getName() +
+                "' is an int which cannot hold a float");
+        }
+    
+        public void setFunctionValue(FunctionNode illegal) {
+            throw new RuntimeException("Symbol '" + getName() +
+                "' is an int which cannot hold a function");
+        }
+    
+        public String toString() {
+            return "int " + getName() + " " + getIntValue();
+        }
+    }
+
 \section{Symbol Tables}
+
+The Symbol objects will live in a SymbolTable.
+
+    import java.util.HashMap;
+    import java.util.Map;
+    
+    public class SymbolTable {
+        Map<String, Symbol> table;
+        SymbolTable parent;
+    
+        public SymbolTable(SymbolTable parent) {
+            table = new HashMap<String, Symbol>();
+            this.parent = parent;
+        }
+    
+        public static SymbolTable generateGlobalSymbolTable() {
+            return new SymbolTable(null);
+        }
+    
+        public SymbolTable getParent() {
+            return parent;
+        }
+    
+        public Symbol resolve(String name) {
+            if (table.containsKey(name)) {
+                return table.get(name);
+            }
+            else if (parent != null) {
+                return parent.resolve(name);
+            }
+            else {
+                throw new RuntimeException("No such symbol " + name);
+            }
+        }
+    
+        public void set(String name, Symbol symbol) {
+            table.put(name, symbol);
+        }
+    
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            for (SymbolTable l = this; l != null; l = l.parent) {
+                sb.append(l.table + "\n");
+            }
+            return sb.toString();
+        }
+    }
+
+The table itself is a Map, specifically a HashMap. When you construct a new
+one, you pass in the parent. This allows us to chain the tables. More on
+that in a moment.
+
+For clarity, I created generateGlobalSymbolTable to make a parentless table.
+That is for the interpreter to use for the global symbols. Other tables will
+be temporary children during function execution.
+
+When you are done with a function's table, the interpeter replaces the
+current SymbolTable with its parent. To find that it calls getParent.
+
+Calling resolve hands you the Symbol in the table. If it isn't there, the
+parent is searched recursively. Only if the name is in none of the current
+tables does the caller receive an exception. This is chaining, which allows
+us to use global variables in functions. But, local variables in the block
+of the function and its parameters will hide globals.
+
+Java doesn't have globals in this sense. Yet, the same idea applies in instance
+methods which use class attributes.
+
+Set is simpler, since new variables always go in the top most table. (We
+think of these tables as a stack.)
+
+Notice that toString here walks back through the stack of tables so callers
+can see everything. This is great for debugging.
+
+\section{Interpreter Symbol Table Management}
+
+In my approach, the interpreter knows all about the symbol tables. It keeps the
+root table for globals and facilitates all actions on tables. These are the helpers.
+
+public class EvalVisitor extends ExprBaseVisitor<Node> {
+    SymbolTable symbols = SymbolTable.generateGlobalSymbolTable();
+
+    public Symbol declare(String type, String id) {
+        Symbol newSymbol = Symbol.getInstance(type, id);
+        symbols.set(id, newSymbol);
+        return newSymbol;
+    }
+
+    public Symbol resolve(String name) {
+        return symbols.resolve(name);
+    }
+
+    public void setValue(String name, Integer newValue) {
+        symbols.resolve(name).setIntValue(newValue);
+    }
+
+    public void setValue(String name, Double newValue) {
+        symbols.resolve(name).setFloatValue(newValue);
+    }
+
+    public void setReturnValue(String name, Symbol symbol) {
+        symbols.set(name, symbol);
+    }
+
+    public void pushCallStackFrame() {
+        symbols = new SymbolTable(symbols);
+    }
+
+    public void popCallStackFrame() {
+        symbols = symbols.getParent();
+    }
+
+    public void dumpSymbolTables() {
+        System.err.println( "Symbols:\n" + symbols.toString());
+    }
+
+The symbols variable always points to the top of the symbol table stack.
+It starts with the parentless root for globals during class initialization.
+Declaring a symbol uses the type name from the grammar: int, float, function
+and the name. Even if the programmer is assigning during declaration, we
+do that in two steps: declare then assign.
+
+Resolve delivers the Symbol of the given name to the caller, or throws an
+error if that symbol table is not in the current stack. Note that it is
+up to the caller to notice if the the type of the symbol is illegal.
+We could have a compilation pass between EvalVisit's walk and calling
+act on the root program node.
+
+The setValue methods allow the caller to provide the properly typed value
+for the symbol. Mismatches ought to be checked somewhere.
+
+The return statement has a special purpose helper so that it doesn't need
+to declare the return variable. It always has the same name and it
+could call declare and set like everyone else. But, this syntactic sugar
+looked good to me.
+
+To start a function call, CallNode will ask the interpreter to pushCallStackFrame.
+This creates a new table, whose parent is the current one. It becomes the
+current one. That parent link in the SymbolTable class is what makes it
+capable of being a stack. This method affects the push.
+
+When the CallNode is done with the function invocation, it must retrieve
+the return value from the current symbol table, then discard that by
+calling popCallStackFrame. That prevents symbols from bleeding
+between function calls.
+
+Finally, a nice way to call toString on the top symbol table is available
+for anyone who has an interpreter instance handy as dumpSymbolTables.
+
+\section{Nodes}
+
+% problems:
+% The original week 6 had a permanent symbol table given to each function
+% compile time. We need to make one on the fly.
+% But, there is a need to have a list of the symbols with their names
+% to form the basis of that.
 
 Exercises
 
