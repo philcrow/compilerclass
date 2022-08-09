@@ -390,15 +390,84 @@ calling popCallStackFrame. That prevents symbols from bleeding
 between function calls.
 
 Finally, a nice way to call toString on the top symbol table is available
-for anyone who has an interpreter instance handy as dumpSymbolTables.
+for anyone who has an interpreter instance handy: dumpSymbolTables.
 
-\section{Nodes}
+\section{Visiting Methods and Nodes}
 
-% problems:
-% The original week 6 had a permanent symbol table given to each function
-% compile time. We need to make one on the fly.
-% But, there is a need to have a list of the symbols with their names
-% to form the basis of that.
+We need some visit method adjustments for the statements we introduced:
+visitDeclare and visitDeclareAssign are brand new. We also need to adjust
+visitFunctionDefinition due to the increased complexity in gathering the
+parameters.
+
+We also need to visitFloat, which is a lot like visitInt.
+
+The CallNode needs changes to account for typed parameters.
+
+\subsection{Visiting Methods}
+
+Bare declarations are compile only. You don't need to store for those.
+
+    @Override
+    public Node visitDeclare(ExprParser.DeclareContext ctx) {
+        String type = ctx.type().getText();
+        String id = ctx.ID().getText();
+
+        declare(type, id);
+        return null;
+    }
+
+We lookup the type and the id, then use the declare helper. There
+is a bug here. Either we need to require values when variables
+are declared in a function's block, or we need a way to note the
+declaration so it can be added to the function's symbol table.
+
+For declarations providing initial values, we do something similar,
+but return an AssignNode.
+
+    @Override
+    public Node visitDeclareAssign(ExprParser.DeclareAssignContext ctx) {
+        String type = ctx.type().getText();
+        String id = ctx.ID().getText();
+        Node valueNode = visit(ctx.expr());
+
+        declare(type, id);
+        return new AssignNode(id, valueNode, this);
+    }
+
+Defining functions is also a compile time activity. We don't want them
+in the runtime tree lest they run by accident. There several changes
+to visitFunctionDefinition.
+
+    @Override
+    public Node visitFunctionDefiniton(ExprParser.FunctionDefinitonContext ctx) {
+        List<Parameter> parameters = collectParameters(ctx.paramList());
+        Node block = visit(ctx.block());
+        String returnType = ctx.type().getText();
+
+        FunctionNode functionNode = new FunctionNode(parameters, returnType, block);
+
+        String functionName = ctx.ID().getText();
+        declare("function", functionName);
+        Symbol functionSymbol = resolve(functionName);
+        // we need to put the node into the symbol table, not just record its name
+        functionSymbol.setFunctionValue(functionNode);
+
+        return null;
+    }
+
+The collection of parameters is only cosmetically different here. The list is of
+type Parameter instead of String. There is more work in collectParameters as we
+will see below.
+
+Collecting the block is the same. Now there is a return type too. These are
+passed to the FunctionNode constructor. We again lookup the function's name,
+but now we put it in the main symbol table with the variables. First, we must
+declare it. Then we give a value by resolving the name to retrieve the
+function's symbol and storing the node there.
+
+\subsection{CallNode Changes}
+
+
 
 Exercises
 
@@ -406,3 +475,9 @@ Exercises
   allow exponents. A lot of languages use the same notation.
   Visit https://www.json.org to see all the options. Keep in mind
   that in JSON number includes integers. Avoid those cases.
+
+. Fix the bug that puts variables declared without values in function blocks
+  in the global symbol table. Either, tell the function node about
+  the declaration so it can be put in the right table at run time,
+  or call an error demanding that these declarations receive initial
+  values.
