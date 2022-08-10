@@ -467,17 +467,156 @@ function's symbol and storing the node there.
 
 \subsection{CallNode Changes}
 
+Now that there are two types, callers could be expecting an int or a float
+to come back from a function. As with other cases, we are happy to deliver
+an int as a float, but using a float as an int is an error.
 
+    import java.util.List;
+    
+    public class CallNode extends Node {
+        String functionName;
+        List<Node> arguments;
+        EvalVisitor interpretter;
+    
+        public CallNode(String functionName, List<Node> arguments, EvalVisitor interpretter) {
+            this.functionName = functionName;
+            this.arguments = arguments;
+            this.interpretter = interpretter;
+        }
+    
+        @Override
+        public void act() { }
+    
+        private Symbol callFunction() {
+            FunctionNode function = getFunctionNode();
+            interpretter.pushCallStackFrame();
+    
+            passParameters(function);
+    
+            try {
+                function.invoke();
+            }
+            catch (ReturnEncounteredException e) {
+                // expected, happens whenever the function hits a return statement
+            }
+    
+            Symbol returnValue = interpretter.resolve(ReturnNode.RETURN_SYMBOL);
+    
+            interpretter.popCallStackFrame();
+    
+            return returnValue;
+        }
+    
+        private FunctionNode getFunctionNode() {
+            Symbol functionSymbol = interpretter.resolve(functionName);
+            return functionSymbol.getFunctionValue();
+        }
+    
+        private void passParameters(FunctionNode function) {
+            List<Parameter> parameters = function.getParameters();
+    
+            // TODO verification of count match (correct number of args)
+            for (int i = 0; i < parameters.size(); i++) {
+                Parameter parameter = parameters.get(i);
+                Node valueNode = arguments.get(i);
+    
+                // verify that the type on the parameter can be delivered by the valueNode
+                if ("int".equals(parameter.getTypeName())) {
+                    if (! valueNode.canBeInt()) {
+                        throw new RuntimeException("parameter " + parameter.getName() + " to function " +
+                                functionName + " must be int");
+                    }
+    
+                    interpretter.declare("int", parameter.getName());
+                    interpretter.setValue(parameter.getName(), valueNode.getIntValue());
+                }
+                else {
+                    interpretter.declare("float", parameter.getName());
+                    interpretter.setValue(parameter.getName(), valueNode.getFloatValue());
+                }
+            }
+        }
+    
+        @Override
+        public boolean canBeInt() {
+            FunctionNode function = getFunctionNode();
+            return function.canBeInt();
+        }
+    
+        @Override
+        public Integer getIntValue() {
+            if (!canBeInt()) {
+                throw new RuntimeException("Float function " + functionName + " asked to give an int");
+            }
+    
+            Symbol returnValue = callFunction();
+            return returnValue.getIntValue();
+        }
+    
+        @Override
+        public Double getFloatValue() {
+            Symbol returnValue = callFunction();
+            return returnValue.getFloatValue();
+        }
+    
+        @Override
+        public boolean getBooleanValue() {
+            return false;
+        }
+    
+        public String toString() {
+            return "call " + functionName + "(" + arguments + ")";
+        }
+    }
+
+The attibutes, constructor and act methods are unchanged. That latter still does nothing.
+Both getIntValue and getFloatValue work similarly. The only difference in structure
+is that getIntValue complains if the function cannot return an int.
+Both invoke callFunction to get the Symbol from the return statement in the function block.
+Then they return the value from it.
+
+It uses the getFunctionNode method to ask for symbol table lookup on the name of the function,
+which it returns as the FunctionNode from that. Error checking is in order here.
+Then, it asks the interpreter to add a symbol table to the stack. I called this
+pushCallStackFrame because other languages will have other things to include
+besides the symbol table. In particular if you are aiming for assembly, you
+are going to need to include the return address so the program can keep running
+from where it left off.
+
+Once the new symbol table is in place, I need to passParameters into it.
+I do that by walking two lists at once: the function's parameters and the
+call's arguments. The types are compared and the usual complaint is raised
+when a programmer asks to stuff a float value into an int slot.
+The rest is just like variable declarations from assign statments.
+
+With the parameters in place, it is time to invoke the function. We are expecting
+the ReturnEncounteredException. The exception itself carries no information,
+but it gives us back control at this point. Traditionally, statements would
+be in sequential memory locations (for assembly). Then the return statement
+would look in the top frame on the call stack for the line number to jump to.
+
+The return statment puts the return value into the symbol table in a location
+with an illegal name, to avoid colliding with programmer code. That symbol
+name is ReturnNode.RETURN_SYMBOL. Once we are holding that, it is time
+to pop the symbol table off the stack and give back the value.
 
 Exercises
 
-. Expand the alternatives in the regular expression for FLOAT to
-  allow exponents. A lot of languages use the same notation.
-  Visit https://www.json.org to see all the options. Keep in mind
-  that in JSON number includes integers. Avoid those cases.
+1. Expand the alternatives in the regular expression for FLOAT to
+   allow exponents. A lot of languages use the same notation.
+   Visit https://www.json.org to see all the options. Keep in mind
+   that in JSON number includes integers. Avoid those cases.
 
-. Fix the bug that puts variables declared without values in function blocks
-  in the global symbol table. Either, tell the function node about
-  the declaration so it can be put in the right table at run time,
-  or call an error demanding that these declarations receive initial
-  values.
+2. Fix the bug that puts variables declared without values in function blocks
+   in the global symbol table. Either, tell the function node about
+   the declaration so it can be put in the right table at run time,
+   or call an error demanding that these declarations receive initial
+   values.
+
+3. Add a validation to ensure that a function has a return statement.
+
+4. Add a void return type so functions can act as procedures. They
+    would then only be useful for side effects, possibly printing.
+
+5. Add better error messaging if the programmer attempts to call an
+    undefined function.
