@@ -1,0 +1,23 @@
+hrs:        alloc   1
+rate:       alloc   1
+pay:        alloc   1
+
+            prompt  "Enter hours worked -> "
+            take    hrs
+            prompt  "Enter pay per hour -> "
+            take    rate
+            brgt    hrs     40.0    overtime
+regular:    move    hrs     %regA
+            mult    rate    %regA
+            move    %regA   pay
+            jump    finish
+overtime:   move    40.0    %regA
+            mult    rate    %regA
+            move    hrs     %regB
+            subt    40.0    %regB
+            mult    rate    %regB
+            mult    1.5     %regB
+            add     %regB   %regA
+            move    %regA   pay
+finish:     prompt  "Gross Pay:"
+            prt     pay

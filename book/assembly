@@ -1,0 +1,324 @@
+\chapter{Assembly}
+
+There are many good books about how to generate genuine assembly from
+an internal representation built by the front half of a compiler.
+See for example {\it
+Introduction to Compilers and Language Design, 2ed} by Douglas
+Thain\footnote{You can download the book from http://compilerbook.org}.
+This book is not one of those.
+
+The problem with generating assembly is that there are so many of
+them. If I showed you how I did it on my computer, you would have
+to have a very similar setup to run the output. This is the problem
+of portability. My solution to that problem is to provide a tiny
+pretend assembly language.
+
+\section{Intro to Pseudo Assembly Language}
+
+My Pseudo Assembly Language (PAL) is designed to give a feel for
+writing in assembly and for generating it. It is
+tiny, only representating a subset of concepts in a genuine assembly.
+It has one assembly directive (to allocate memory for a global
+variable) and only 19 instructions total.
+
+%It does not provide a heap
+%or a stack. All of its registers are floating point, but can be
+%used as if they were for integers when that makes sense.
+
+%PAL is actually based on Macro-11, since that is the only assembly
+%I ever learned to use. That was in a college course in the 1980s.
+%I still have the book and used it as a model. This language predates
+%memory segments. You can do a lot of things wrong in PAL, but you
+%can never earn a segmentation fault.
+
+PAL is based on a 1970s era assembly, so it is simpler than a modern one.
+In those assembly languages each (non-blank) line in the input file is
+an instruction that will live sequentially in memory when the program
+runs. In these assemblies, code and data could be mixed. This is not
+safe. Care is needed.
+
+We want to start the programs by allocating memory for global variables.
+Then we include the instructions that run. Each line can have a label,
+which other lines can refer to. They might use the label to jump to
+the line or as a kind of variable name to retrieve a value stored there.
+
+%To organize these lines, you need labels. For data, the label becomes
+%the name of its location (like a variable name). For instructions it
+%becomes the destination of jumps, which we use to implement flow of
+%control like if/else or loops. Unconditional jumps have long been considered
+%harmful\footnote{See Go To Statement Considered Harmful by Edgar Dijkstra:
+%https://homepages.cwi.nl/~storm/teaching/reader/Dijkstra68.pdf},
+%but, in assembly you have nothing else. The key is to be organized
+%in their use. Have a rule about when an unconditional jump will be
+%used (only to continue a loop, or effect an if/else) and stick to it.
+%
+%So these are the elements of PAL: labels, allocation of memory,
+%and instructions.
+
+Let's see the elements of PAL. After we see them -- and understand how
+to write programs by hand -- we will talk about generating PAL from
+the language we have been building.
+
+\subsection{Allocation}
+
+The alloc directive sets asside memory. Its one operand is the number of
+slots you want. You need multiple slots for arrays.
+You have to hard code how many slots your array will use.
+
+You need to label the alloc directive, otherwise you can't refer to that
+memory later.
+
+    hours:  alloc 1
+
+Here we see the structure of all statements in PAL:
+
+    an optional label (hours)
+    a colon
+    an instruction name (alloc)
+    at least one space
+    one or more space separated operands (1)
+
+\subsection{Memory}
+
+We need a way to put values into allocated memory. PAL provides take
+to bring such a value from the keyboard into memory.
+
+    take hours
+
+The only operand for take is the location where the end users value lands
+(hours in this case). This will fail unless you have an alloc statement
+at the top of the program with this label.
+
+For convenience, you can use the prompt command to print a string telling
+your user what your are taking:
+
+    prompt "Enter hours worked -> "
+
+The argument here is a simple string.
+
+If you want to print a value from memory on standard out, use print
+
+    print hours
+
+This takes one label which must be allocated memory. The value in the
+variable is what the users sees.
+
+You need to move data to a register in order to perform a calculation
+in assembly. Once the register calculation is finished, you need to
+put the answer back into memory so the register can be used for later
+calculations. Use move to copy values in memory.
+
+    move hours \%regA
+
+I'll say more about the registers later. For now notice that they
+are not labeled memory locations. So, they have a syntax to indicate that.
+There are six registers. Refer to them as \%regA - %regF.
+
+To see the current state of memory use the shower command which has no
+operands.
+
+    shower
+
+This is not a debugger, but it shows the internal data.
+
+\subsection{Arithmetic}
+
+There are four arithmetic operations in PAL: add, subt (subtract),
+mult (multiply), and div. Each of these takes a source operand from
+memory or a register and a destination register. You can only calculate
+in the registers.
+
+    add         3.0     %regC
+    subt        40.0    %regB
+    mult        1.5     %regA
+    div         2.0     %regD
+
+It is traditional in assembly to abbreviate instruction names with three
+or four letters. I don't follow that completely in PAL, but it has a
+bit of the flavor here.
+
+\subsection{Flow of Control}
+
+If you want to exit a PAL program use end with the exit status like
+a C exit statment.
+
+    end 0
+
+In Unix a zero exit status means nothing to report, all went well.
+Other numbers indicate errors.
+
+When you get to the bottom of the block for a loop, you don't have
+braces or indentation to tell you that. So, you need a jump instruction
+to restart the loop's code.
+
+    jump    loopTop
+
+The operand for the jump instruction must be the label of an instruction.
+
+To perform an if, you need one of the branch instructions. There are six
+of these, one for each numeric comparison operator.
+
+    breq    leftOperand     rightOperand    desination
+    brne    leftOperand     rightOperand    desination
+    brge    leftOperand     rightOperand    desination
+    brgt    leftOperand     rightOperand    desination
+    brle    leftOperand     rightOperand    desination
+    brlt    leftOperand     rightOperand    desination
+
+The instruction indicates the desired comparison. So, breq tests
+for equality, brne for the opposite, brge >=, brgt >, brle <=,
+and brlt <.
+
+That operator is used between the leftOperand and the rightOperand
+which can be registers, literal numbers, or memory locations.
+The destination must be an instruction label (or the integer
+line number of an instruction) to jump to if the condition is met.
+
+Consider
+
+    brgt    40.0    hours   overtime
+
+This say branch to the line labeled overtime when 40.0 is greater
+that the value in the allocated memory labeled hours. 
+
+Finally, you can call a subroutine. This is primative, even more
+so that in a real assembly. Before your make the call, you need
+to arrange values in memory that the destination is expecting.
+If it needs to return a value to you, it must put it in an agreed
+upon location.
+
+                gosub   subLabel
+    ...
+    subLabel:   ...
+                ret
+
+The gosub instruction has a single operand which is the address of
+the line where the subroutine starts. This can be a label, or anything
+that has the line number (for example a memory location).
+
+That is the complete list of instructions in PAL.
+
+\section{Example PAL Programs Part I}
+
+Let's look at some example programs the above makes possible
+
+\subsection{Compute Gross Pay}
+
+With what have seen so far, we can write a program to compute
+gross pay for an hourly working earning overtime for hours over 40.
+
+    hrs:        alloc   1
+    rate:       alloc   1
+    pay:        alloc   1
+
+                prompt  "Enter hours worked -> "
+                take    hrs
+                prompt  "Enter pay per hour -> "
+                take    rate
+                brgt    hrs     40.0    overtime
+    regular:    move    hrs     %regA
+                mult    rate    %regA
+                move    %regA   pay
+                jump    finish
+    overtime:   move    40.0    %regA
+                mult    rate    %regA
+                move    hrs     %regB
+                subt    40.0    %regB
+                mult    rate    %regB
+                mult    1.5     %regB
+                add     %regB   %regA
+                move    %regA   pay
+    finish:     prompt  "Gross Pay:"
+                prt     pay
+
+Explanation, step by step. The first three lines allocate variables:
+hrs (for how much the employee worked), rate (for how many dollars
+per hour they earn), and pay to hold their gross pay (the answer).
+
+Blank lines are legal and ignored. PAL does not support comments.
+
+The next four lines take data from the keyboard into hrs and rate.
+Prompt statements tell the user what to enter. Take statements store
+what they enter in the labeled location.
+
+This program assumes time-and-a-half for hours above 40. The brgt
+statement tests hrs > 40. If that is true, it jumps to the line
+labeled overtime. Otherwise, it falls through. The regular label
+is not referenced, but serves as documentation for the programmer.
+
+For hours under fourty, it is enough to put the hrs into register A,
+multiply that by the rate, then move the result to pay. Then we need
+to jump over the overtime block to finish. This is typical, we
+use jumps at the end of a set of instructions to avoid performing
+the blocks for both if and else. (Note that if you think of brgt
+as an if statement, the first block is actually for the else case.)
+
+In overtime we have more work to do. First, put a literal 40
+into register A and multiply that by the rate. Then move the
+total hours into register B, subtract fourty from that, multiply
+by the rate, and again by 1.5. Finally, add register B (the overtime
+pay) to register A (the base pay for fourty hours), and move
+the result to the pay location.
+
+In either case, we arrive at the finish lable. Either because of the
+jump after doing the under fourty calculation or because we fell
+through the end of the overtime code. This prints a label and then
+the answer.
+
+To run this, put it in a file called payroll.pal and execute
+
+    gradle build
+    java -jar build/lib/pal.jar payroll.pal
+    42
+    12
+
+The you should see
+
+    Gross Pay:
+    516.0
+
+\subsection{Factorial}
+
+We have the ability to call subroutines recursively in PAL. Consdier
+this program that computes factorial.
+
+    n:         alloc      1
+    original   alloc      1
+    answer:    alloc      1
+
+               prompt     "Enter and integer n, I'll find n! ->"
+               take       n
+               move       n       original
+               move       1.0     %regB
+               gosub      fact
+               move       %regB   answer
+               prompt     "Factorial of"
+               prt        original
+               prompt     "is"
+               prt        answer
+               end        0
+    fact:      brle       n     1.0     base
+               mult       n     %regB
+               move       n     %regA
+               subt       1.0   %regA
+               move       %regA n
+               gosub      fact
+    base:      ret
+
+Recall that 5! is 5 times 4 times 3 times 2, which is 120.
+If I run this program, that is what I should see as the final output.
+
+    build gradle
+    java -jar build/lib/pal.jar factorial.pal
+    Enter and integer n, I'll find n! ->
+    5
+    Factorial of
+    5.0
+    is
+    120.0
+
+\section{Addressing Modes}
+
+Arrays in assembly are a challenge. For them we need more than just
+move with either literal numbers or labels. We want addresses and
+pointers. For these we use addressing modes.

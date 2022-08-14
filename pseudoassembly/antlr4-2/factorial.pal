@@ -1,0 +1,22 @@
+    n:         alloc      1
+    original   alloc      1
+    answer:    alloc      1
+
+               prompt     "Enter and integer n, I'll find n! ->"
+               take       n
+               move       n       original
+               move       1.0     %regB
+               gosub      fact
+               move       %regB   answer
+               prompt     "Factorial of"
+               prt        original
+               prompt     "is"
+               prt        answer
+               end        0
+    fact:      brle       n     1.0     base
+               mult       n     %regB
+               move       n     %regA
+               subt       1.0   %regA
+               move       %regA n
+               gosub      fact
+    base:      ret
