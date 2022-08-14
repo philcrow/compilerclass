@@ -11,7 +11,7 @@ public class PALInterpretter extends PALBaseListener {
     String currentLabel;
 
     // the registers
-    Double[] registers;
+    Map<String, Double> registers;
 
     // every alloc will add element(s) to this segment
     List<Double> memorySegment;
@@ -41,9 +41,14 @@ public class PALInterpretter extends PALBaseListener {
         commands = new ArrayList<>();
         symbolTable = new HashMap<>();
         callStack = new ArrayList<Integer>();
-        registers = new Double[] {
-            0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0 };
+        registers = new HashMap<String, Double>() {{
+            put("A", 0.0);
+            put("B", 0.0);
+            put("C", 0.0);
+            put("D", 0.0);
+            put("E", 0.0);
+            put("F", 0.0);
+        }};
     }
 
     public void run() {
@@ -84,8 +89,14 @@ public class PALInterpretter extends PALBaseListener {
     }
 
     public void storeValue(PALOperand destOp, Double value) {
-        Integer dest = destOp.resolveDestination();
-        memorySegment.set(dest, value);
+        if (destOp.isRegister()) {
+            String dest = destOp.getRegisterNumber();
+            registers.put(dest, value);
+        }
+        else {
+            Integer dest = destOp.resolveDestination();
+            memorySegment.set(dest, value);
+        }
     }
 
     // methods to help PALOperand resolve locations
@@ -101,12 +112,12 @@ public class PALInterpretter extends PALBaseListener {
         memorySegment.set(location, new Double(newPointer));
     }
 
-    public Double retrieveRegister(int register) {
-        return registers[register];
+    public Double retrieveRegister(String register) {
+        return registers.get(register);
     }
 
-    public void storeRegister(int register, Double value) {
-        registers[register] = value;
+    public void storeRegister(String register, Double value) {
+        registers.put(register, value);
     }
 
     // parser listener methods below

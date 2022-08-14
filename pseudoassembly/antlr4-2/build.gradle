@@ -8,4 +8,20 @@ repositories {
 
 dependencies {
     antlr "org.antlr:antlr4:4.10.1"
+    testImplementation 'junit:junit:4.13'
+    testImplementation 'commons-io:commons-io:2.6'
+    testImplementation 'org.hamcrest:java-hamcrest:2.0.0.0'
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "PALRunner"
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+test {
+    testLogging.showStandardStreams = true
 }

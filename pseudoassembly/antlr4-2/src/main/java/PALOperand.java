@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PALOperand {
+    public static final String NOT_A_REGISTER = "Q";
     private String symbol = "";
     private Double doubleValue = 0.0;
     private boolean literal;
@@ -12,7 +13,7 @@ public class PALOperand {
     private boolean direct = true;
     private int increment = 0;
     private boolean incrementPost = false;
-    private int registerNumber = -1;
+    private String registerNumber = NOT_A_REGISTER;
     private PALInterpretter interpretter;
 
     private PALOperand(PALInterpretter interpretter) {
@@ -31,7 +32,7 @@ public class PALOperand {
 
     public static PALOperand getRegisterInstance(String register, PALInterpretter interpretter) {
         PALOperand that = new PALOperand(interpretter);
-        that.registerNumber = Integer.valueOf(register);
+        that.registerNumber = register;
         return that;
     }
 
@@ -46,6 +47,14 @@ public class PALOperand {
             that.handlePointer(operand.value());
         }
         return that;
+    }
+
+    public String getRegisterNumber() {
+        return registerNumber;
+    }
+
+    public boolean isRegister() {
+        return ! NOT_A_REGISTER.equals(registerNumber);
     }
 
     public Integer resolveSource() {
@@ -75,6 +84,10 @@ public class PALOperand {
     }
 
     public Double retrieveValue() {
+        if (isRegister()) {
+            return interpretter.retrieveRegister(registerNumber);
+        }
+
         if (literal) {
             return doubleValue;
         }
@@ -136,10 +149,6 @@ public class PALOperand {
 
     public Double getValue() {
         return 0.0;
-    }
-
-    public int getRegisterNumber() {
-        return registerNumber;
     }
 
     public void setPointerValues(String symbol, int increment, boolean incrementPost) {

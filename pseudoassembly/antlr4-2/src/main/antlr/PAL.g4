@@ -57,8 +57,8 @@ address : '&' IDENT ;
 increment : PLUS | MINUS ;
 
 IDENT: [a-z]+ ;
-REGNUM: [0-5] ;
 INT: [0-9]+ ;
+REGNUM: [A-F] ;
 FLOAT: [0-9]* '.' [0-9]+ ;
 STRING: '"' .*? '"' ;
 PLUS : '+' ;
