@@ -3,8 +3,9 @@ Intro
 Personal Intros
 (If not already done.)
 
+(Examples are in: /home/phil/training/college.courses/compilers/scratchpaper/)
 Compiling is translating a human readable source code language
-into something else. That something else could be a PDF.
+into some other language. That other language could be a PDF.
 
 Dot is a language that describes directed graphs.
 When you run the dot compiler, you get graphical output like png.

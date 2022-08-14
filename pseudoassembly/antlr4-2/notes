@@ -1,0 +1,31 @@
+Parsing PAL with Antlr4
+
+Make a grammar file called PAL.g4
+
+Make sure you have the current directory and antlr-4.10.1-complete.jar
+in the CLASSPATH.
+
+Write a script or Makefile to do these steps in order:
+    1. java -jar /usr/local/lib/antlr-4.10.1-complete.jar PAL.g4 -o build
+    2. cd build; javac *.java
+I still need to figure out how to get the package instruction to antrl4 to
+make the usual Java directory tree.
+
+Make an alias for grun:
+    alias grun='java org.antlr.v4.gui.TestRig'
+
+Then you need to be in the build directory to test with:
+
+    cd build
+    grun PAL program -gui ../../payroll.pal
+
+This builds and displays the parse tree based on the generated lexer/parser
+pair. It also makes an interface for walking PALListener.java and an
+implementation PALBaseListener.java so we can inherit and replace the
+methods we care about.
+
+We also need a main method to deliver the file to the parser.
+
+PACKAGING?
+https://stackoverflow.com/questions/30642144/generating-antlr4-grammar-files-with-package-declaration-in-gradle
+suggests a basic gradle approach

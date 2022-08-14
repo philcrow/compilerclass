@@ -13,7 +13,19 @@ into something else called the target language.
 Traditionally, the target language is assembly. The most famous
 current compiler following this tradition is gcc. Given a C program,
 it will generate assembly, then quietly assemble and link that, so you
-receive an executable.
+receive an executable. How portable will the executable be? Not very.
+
+    #include <stdio.h>
+
+    int main(int argc, char *argv[]) {
+        printf("Hello %s\n", "Rob");
+        return 12;
+    }
+
+Compile and run:
+
+    gcc hello.c -o hello
+    ./hello
 
 \subsection{dot}
 
@@ -104,6 +116,10 @@ it to JavaScript, since that is the only language the browsers understand.
 
 Languages that convert one source language to another are called transpilers.
 
+I don't have this installed, if you want to play with it see
+
+    https://www.typescriptlang.org/play/
+
 \subsection{Sass}
 
 CSS is the language which controls the appearance of web pages. It is
@@ -112,6 +128,10 @@ or loops. As with JavaScript, many have tried to improve it by making
 a super-language which is more expressive, but can be transpiled to CSS.
 The one I have heard the most about is Syntactially Awesome Style Sheets
 (Sass).
+
+I don't have this installed, to read more about it see
+
+    https://sass-lang.com/guide
 
 \subsection{Virtual Machines}
 
@@ -164,4 +184,6 @@ Visit https://gradle.org/ if you need to install gradle.
 Visit https://www.antlr.org/ to install ANTLR4.
 
 If you want to generate assembly, you need an assembler. Good news:
-gcc has that inside it. That's my choice.
+gcc has that inside it. That's one choice. I also have a little
+pseudo-assembler I wrote to give a feel for assembly without worrying
+about actual chip instructions.
