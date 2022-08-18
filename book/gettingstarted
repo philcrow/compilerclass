@@ -26,6 +26,12 @@ Compile and run:
 
     gcc hello.c -o hello
     ./hello
+    echo $? # to see the exit status
+
+https://gcc.gnu.org/
+
+From the website you can see that gcc is actually more than a c compiler.
+That's just its most famous feature.
 
 \subsection{dot}
 
@@ -46,6 +52,8 @@ To compile it, run:
 
 Then you will have png output in family.png showing this tiny excerpt
 of my family tree.
+
+https://graphviz.org/
 
 \subsection{TeX}
 
@@ -71,6 +79,8 @@ Save that as article.tex and run
     pdflatex article.tex
 
 to make a PDF. This is my preferred mode of PDF generation.
+
+https://www.latex-project.org/
 
 \subsection{lilypond}
 

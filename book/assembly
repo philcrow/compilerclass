@@ -21,21 +21,10 @@ tiny, only representating a subset of concepts in a genuine assembly.
 It has one assembly directive (to allocate memory for a global
 variable) and only 19 instructions total.
 
-%It does not provide a heap
-%or a stack. All of its registers are floating point, but can be
-%used as if they were for integers when that makes sense.
-
-%PAL is actually based on Macro-11, since that is the only assembly
-%I ever learned to use. That was in a college course in the 1980s.
-%I still have the book and used it as a model. This language predates
-%memory segments. You can do a lot of things wrong in PAL, but you
-%can never earn a segmentation fault.
-
 PAL is based on a 1970s era assembly, so it is simpler than a modern one.
 In those assembly languages each (non-blank) line in the input file is
 an instruction that will live sequentially in memory when the program
-runs. In these assemblies, code and data could be mixed. This is not
-safe. Care is needed.
+runs.
 
 We want to start the programs by allocating memory for global variables.
 Then we include the instructions that run. Each line can have a label,
@@ -317,8 +306,14 @@ If I run this program, that is what I should see as the final output.
     is
     120.0
 
-\section{Addressing Modes}
+\section{Emitting PAL}
 
-Arrays in assembly are a challenge. For them we need more than just
-move with either literal numbers or labels. We want addresses and
-pointers. For these we use addressing modes.
+Now that we have a working knowledge of PAL, we can emit it from
+our expression language.
+
+% If we get to arrays
+%\section{Addressing Modes}
+%
+%Arrays in assembly are a challenge. For them we need more than just
+%move with either literal numbers or labels. We want addresses and
+%pointers. For these we use addressing modes.
