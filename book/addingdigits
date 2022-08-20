@@ -159,17 +159,14 @@ things.
     import org.antlr.v4.runtime.tree.ErrorNode;
     import org.antlr.v4.runtime.tree.TerminalNode;
     
-    import java.util.List;
-    
     public class Interpretter extends CalcBaseListener {
         int answer = 0;
     
         @Override
         public void enterProgram(CalcParser.ProgramContext ctx) {
-            List<TerminalNode> numberNodes = ctx.NUMBER();
-            for (TerminalNode node : numberNodes) {
-                answer += Integer.valueOf(node.getText());
-            }
+            int left = Integer.valueOf(ctx.NUMBER(0).getText());
+            int right = Integer.valueOf(ctx.NUMBER(1).getText());
+            answer = left + right;
         }
     
         public int getAnswer() {
@@ -177,15 +174,13 @@ things.
         }
     }
 
-I kept the imports from CalcBaseListener and added one for List, since
-there are two operands in one of our programs and antlr will deliver
-multiples in a list.
+I kept the imports from CalcBaseListener.
 
 Notice that exitProgram is not present. Don't implement methods that
 don't need to do anything.
 
 Each enter and exit method receives the ctx parameters which the
-parser made for the tokens. It is subtree for this node in the program
+parser made for the tokens. It is the subtree for this node in the program
 tree. That is, it represents the children of the rule in the enter method
 name (program here).
 
