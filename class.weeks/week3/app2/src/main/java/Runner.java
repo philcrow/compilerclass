@@ -14,7 +14,7 @@ public class Runner {
         ExprParser        parser = new ExprParser(tokens);
         ParseTree         tree   = parser.program();
 
-        EvalVisitor eval = new EvalVisitor();
+        EvalVisitor<Node> eval = new PALEvalVisitor();
         Node program = eval.visit(tree);
         program.act();
 

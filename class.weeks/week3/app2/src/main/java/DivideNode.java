@@ -20,7 +20,7 @@ public class DivideNode extends Node {
         String leftEmission = left.emit(leftRegister);
         String rightEmission = right.emit(register);
 
-        String myEmission = "IDIV " + leftRegister + ", " + register + "\n";
+        String myEmission = "div " + leftRegister + " " + register + "\n";
 
         treeHelper.freeRegister(leftRegister);
 

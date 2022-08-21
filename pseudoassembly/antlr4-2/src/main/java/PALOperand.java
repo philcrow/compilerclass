@@ -117,10 +117,10 @@ public class PALOperand {
 
     // Methods for parsing below
 
-    public static List<PALOperand> getInstances(List<PALParser.OperandContext> operands, PALInterpretter interpretter) {
+    public static List<PALOperand> getInstances(List<PALParser.SourceContext> sources, PALInterpretter interpretter) {
         List<PALOperand> answer = new ArrayList<>();
-        for (PALParser.OperandContext operand : operands) {
-            answer.add(PALOperand.getOperandInstance(operand, interpretter));
+        for (PALParser.SourceContext source : sources) {
+            answer.add(PALOperand.getSourceInstance(source, interpretter));
         }
         return answer;
     }

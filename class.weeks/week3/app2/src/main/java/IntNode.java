@@ -11,7 +11,7 @@ public class IntNode extends Node {
 
     @Override
     public String emit(String register) {
-        return "movl $" + value + ", " + register + "\n";
+        return "move " + value + ".0 " + register + "\n";
     }
 
     @Override

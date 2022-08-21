@@ -19,10 +19,7 @@ public class PrintNode extends Node {
 
         String childEmission = valueNode.emit(register);
 
-        String myEmission = "movl " + register + ", %esi\n" +
-            "leaq .PRTSTR(%rip), %rdi\n" +
-            "movl $0, " + register + "\n" +
-            "call printf@PLT\n";
+        String myEmission = "prt " + register + "\n";
 
         treeHelper.freeRegister(register);
 

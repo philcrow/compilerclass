@@ -33,7 +33,7 @@ jump      : 'jump' operand;
 gosub     : 'gosub' operand ;
 multiply  : 'mult' source register ;
 prompt    : 'prompt' STRING ;
-print     : 'prt' operand+ ;
+print     : 'prt' source+ ;
 return    : 'ret' ;
 shower    : 'shower' ;
 move      : 'move' source source ;

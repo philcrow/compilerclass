@@ -20,7 +20,7 @@ public class AddNode extends Node {
         String leftEmission = left.emit(leftRegister);
         String rightEmission = right.emit(register);
 
-        String myEmission = "addl " + leftRegister + ", " + register + "\n";
+        String myEmission = "add " + leftRegister + " " + register + "\n";
 
         treeHelper.freeRegister(leftRegister);
 

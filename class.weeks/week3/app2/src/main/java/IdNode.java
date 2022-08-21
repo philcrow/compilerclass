@@ -13,7 +13,7 @@ public class IdNode extends Node {
 
     @Override
     public String emit(String register) {
-        return "movl " + symbol + ", " + register + "\n";
+        return "move " + symbol + " " + register + "\n";
     }
 
     @Override

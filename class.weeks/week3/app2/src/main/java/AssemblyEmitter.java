@@ -1,3 +1,5 @@
+// Abandoned, EvalVisitor implementations were modified instead.
+// This was left over from a prior attempt at emitting done in week3/app.
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;

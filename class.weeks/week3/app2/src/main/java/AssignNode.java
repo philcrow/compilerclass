@@ -20,7 +20,7 @@ public class AssignNode extends Node {
         act();
         String register = visitor.getFreeRegister();
         String childEmission = valueNode.emit(register);
-        String myEmission = "movl " + register + ", " + symbol + "\n";
+        String myEmission = "move " + register + " " + symbol + "\n";
         visitor.freeRegister(register);
         return childEmission + myEmission;
     }

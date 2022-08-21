@@ -216,7 +216,7 @@ public class PALInterpretter extends PALBaseListener {
 
     @Override
     public void enterPrint(PALParser.PrintContext ctx) {
-        commands.add(new PALPrintNode(currentLabel, PALOperand.getInstances(ctx.operand(), this), this));
+        commands.add(new PALPrintNode(currentLabel, PALOperand.getInstances(ctx.source(), this), this));
     }
 
     @Override

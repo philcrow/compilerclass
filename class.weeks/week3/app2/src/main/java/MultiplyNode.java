@@ -20,7 +20,7 @@ public class MultiplyNode extends Node {
         String leftEmission = left.emit(leftRegister);
         String rightEmission = right.emit(register);
      
-        String myEmission = "imul " + leftRegister + ", " + register + "\n";
+        String myEmission = "mult " + leftRegister + " " + register + "\n";
 
         treeHelper.freeRegister(leftRegister);
 
