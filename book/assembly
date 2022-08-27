@@ -311,6 +311,210 @@ If I run this program, that is what I should see as the final output.
 Now that we have a working knowledge of PAL, we can emit it from
 our expression language.
 
+\subsection{Register Management}
+
+As with many assembly languages, PAL has a limited number of registers
+(admittedly in PAL this could be rectified without changing a silicon
+chip fabrication). In particular, there are six registers named
+\%regA - \%regF.
+
+At the beginning of emission, we need to create a list of free registers.
+When a node wants to use a register, it will request one from the free
+list. Then, when it is done with it, put it back. There are many ways
+to manage a free list. My way is with a stack.
+
+In PALEvalVisitor, I used these methods to make all of that possible.
+
+    private Stack<String> initRegisters() {
+        Stack<String> answer = new Stack<>();
+        String[] names = new String[] {
+            "%regD",
+            "%regC",
+            "%regB",
+            "%regA",
+        };
+        Arrays.stream(names).forEach(name -> answer.push(name));
+
+        return answer;
+    }
+
+Notice that I only added four of the six registers to the free list.
+We probably don't need more. I chose this number because x86 assembly
+on my Linux system had four convenient integer registers, so I stuck
+with that number.
+
+The constructor calls this in addition to building the symbol table.
+
+    Map<String, Integer> symbolTable;
+    Stack<String> freeRegisters;
+
+    public PALEvalVisitor() {
+        symbolTable = new HashMap<>();
+        freeRegisters = initRegisters();
+    }
+
+    public String getFreeRegister() {
+        if (freeRegisters.empty()) {
+            throw new RuntimeException("No available registers.");
+        }
+        return freeRegisters.pop();
+    }
+
+When an emitting routine wants a register, it calls getFreeRegister.
+It must be a steward of that register, using it for its purpose and
+putting it back when finished.
+
+    public void freeRegister(String register) {
+        freeRegisters.push(register);
+    }
+
+When that faithful stewardship is finishing, the emitter calls freeRegister
+to return the register to the free list.
+
+\subsection{Emitting}
+
+In the top level PALEvalVisitor we need an emit method to drive the process.
+
+    public String emit(Node program) {
+        String programEmission = program.emit(null);
+
+        StringBuilder sb = new StringBuilder(emitSymbolTable() + "\n");
+
+        sb.append(programEmission);
+
+        return sb.toString();
+    }
+
+First, it calls emit on the node passed to it by the runner. That will
+be a ProgramNode and we could insist on that here.
+
+    public String emit(ProgramNode program) {...}
+
+Note that it needs to store the emissions from the tree nodes from
+program to all of its descendents. Only after they have generated
+their output will it have the symbol table ready for memory allocation.
+
+    private String emitSymbolTable() {
+        StringBuilder sb = new StringBuilder();
+        for (String symbol : symbolTable.keySet()) {
+            sb.append(symbol + ": alloc 1\n");
+        }
+        return sb.toString();
+    }
+
+We must emit the symbol table first, memory must be allocated before
+it is used in PAL. In other assemblies, this order is also required
+because modern safety requirements prevent mixing data and code. Data
+comes in the first segment.
+
+The version of Node now requires that subclasses implement emit with
+an optional register. This allows parents to pass a register to their
+children.
+
+    public abstract class Node {
+        public abstract void act();
+        public abstract String emit(String register);
+        public abstract Integer getIntValue();
+    }
+
+To simplify things, I have returned to an integer version of the language.
+Feel free to expand on this to allow types including functions.
+
+Now each Node will implement emit. The IdNode and IntNode will move
+their values into the register supplied by their parent expression.
+
+    public class IdNode extends Node {
+        ...
+        @Override
+        public String emit(String register) {
+            return "move " + symbol + " " + register + "\n";
+        }
+        ...
+    }
+
+    public class IntNode extends Node {
+        ...
+        @Override
+        public String emit(String register) {
+            return "move " + value + ".0 " + register + "\n";
+        }
+        ...
+    }
+
+Note that PAL only supports floats and its literal numbers must include
+a decimal point and at least one number after it. Even though the source
+language only does integer math, the target supports only floating point
+math. Such is the nature of life.
+
+When we print, we need the children of the expression to emit enough
+PAL to calculate their values, leaving them in a register from which we
+actually print.
+
+    public class PrintNode extends Node {
+        @Override
+        public String emit(String ignoredRegister) {
+            String register = treeHelper.getFreeRegister();
+
+            String childEmission = valueNode.emit(register);
+
+            String myEmission = "prt " + register + "\n";
+
+            treeHelper.freeRegister(register);
+
+            return childEmission + myEmission;
+        }
+    }
+
+This requires retrieving a free register for the top level expression node
+to use for its answer. We get that from the getFreeRegister method
+of PALEvalVisitor shown earlier. Notice that we hold onto the register
+from giving it to the child expression through emitting the actual
+prt command. Then, we must free it so others can use it. Otherwise we
+will soon run out of registers.
+
+Each of the calculation Nodes is highly similar. I will only show emit
+for AddNode.
+
+    public class AddNode extends Node {
+        @Override
+        public String emit(String register) {
+            String leftRegister = treeHelper.getFreeRegister();
+            // right register is the one that was given to me
+            String leftEmission = left.emit(leftRegister);
+            String rightEmission = right.emit(register);
+
+            String myEmission = "add " + leftRegister + " " + register + "\n";
+
+            treeHelper.freeRegister(leftRegister);
+
+            return leftEmission + rightEmission + myEmission;
+        }
+    }
+
+Some parent expression will be calling this method passing it a final
+destination register. The right child can use that, since the final
+result for the right child is needed here and can hold the final
+answer of addition. But, the left child expression needs a different
+register. So, we again call getFreeRegister on our PALEvalVisitor instance.
+At the end, we free that register. We do not free the right register,
+since our parent will use it for our result and then free it.
+
+\subsection{Tidiness}
+
+You can spend as much or as little time as you like on formatting generated
+code. When gcc generates assembly, we generally don't care what it looks like.
+But, while you are working on the generator, proper indentation and
+some extra whitespace can be really valuable. Feel free to tidy the emissions.
+
+Exercise
+
+1. Add support for floating point numbers either by switching to them
+   or by supporting both int and float types.
+
+2. Add support for functions to the emission scheme.
+
+3. Add indentation and column alignment of the emitted code.
+
 % If we get to arrays
 %\section{Addressing Modes}
 %
