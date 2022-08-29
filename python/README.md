@@ -81,6 +81,37 @@ Run the program. At a command line, type:
 
 Note that your antlr4 may be available as antlr and python3 may be available as just python.
 
+## Testing Python
+
+In a file called AddTest.py, type in a text editor:
+
+    from antlr4 import *
+    from CalcLexer import CalcLexer
+    from CalcParser import CalcParser
+    from Adder import Adder
+    import unittest
+    
+    class TestAdder(unittest.TestCase):
+        def test_adding(self):
+            input_stream = InputStream("3+4")
+            lexer = CalcLexer(input_stream)
+            stream = CommonTokenStream(lexer)
+            parser = CalcParser(stream)
+            tree = parser.program()
+            adder = Adder()
+            walker = ParseTreeWalker()
+            walker.walk(adder, tree)
+    
+            answer = adder.answer
+            self.assertEqual(7, answer)
+    
+    if __name__ == '__main__':
+        unittest.main()
+
+Then you can run this test with
+
+    python3 AddTest.py
+
 ## Finding ANTLR Source Code
 
 If you want to know what the python antlr runtime system provides,
