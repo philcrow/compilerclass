@@ -80,3 +80,20 @@ Run the program. At a command line, type:
     python3 driver.py program
 
 Note that your antlr4 may be available as antlr and python3 may be available as just python.
+
+## Finding ANTLR Source Code
+
+If you want to know what the python antlr runtime system provides,
+use the python repl:
+
+    python3
+
+That gives a little introduction including the version of python you
+are using. Then, it shows a prompt: `>>>`.
+
+At the prompt type:
+
+    import antlr4
+    antlr4.__file__
+
+That will print the path to the location of the files.
