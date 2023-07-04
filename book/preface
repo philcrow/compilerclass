@@ -1,3 +1,5 @@
+\chapter*{Preface}
+
 There are usually two sides to technology: using it and working on it.
 Loosely, I call this driver's ed vs. auto shop. In the former we learn
 to operate a car: parking, signaling, turning, minding the rules of the
@@ -14,7 +16,7 @@ theoretically and how they are implemented. Our goal will be to use
 tools to make languages.
 
 One of the important inovations in software development since the start
-of my career actually has nothing specifically to do with code. It is the
+of my career has nothing to do with code. It is the
 agile process. One of the key concepts of agile development is the Minimum
 Viable Product (MVP). The idea is to build something that will run and
 deliver some value to the users. After it is in the users' hands, revisit
@@ -28,7 +30,8 @@ type checking, if/else and while, and functions. Even at the end
 we won't have a fully useful language, but we will have learned to build one.
 
 The main tool of this course is ANTLR4 which was written by Terence Parr.
-He wrote an excellent book about it called The Definitive ANTLR4 Reference.
+He wrote an excellent book about it called
+{\it The Definitive ANTLR4 Reference}.
 You will probably want to consult that, or the various forms of online
 documentation including especially antlr.org.
 
