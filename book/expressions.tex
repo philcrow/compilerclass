@@ -15,6 +15,8 @@ to deal with whitespace we don't need.
 If you did exercises two and three in the last chapter, you are ahead of the
 game. Here is my new grammar:
 
+{\footnotesize
+\begin{verbatim}
     grammar Calc;
     
     program : NUMBER '*' NUMBER  # Mulitply
@@ -23,6 +25,8 @@ game. Here is my new grammar:
     
     NUMBER: '-'? [0-9]+ ;
     WS: [ \t\n\r] -> skip ;
+\end{verbatim}
+}
 
 There are several new features. Starting at the bottom, we see WS
 for whitespace. The character class for that is space, tab, line feed,
@@ -82,6 +86,8 @@ the tests, but we can keep the first one wihtout alteration.
 The interpretter is a different story. We need to teach it about
 multiplication and separate that from addition.
 
+{\footnotesize
+\begin{verbatim}
     import org.antlr.v4.runtime.ParserRuleContext;
     import org.antlr.v4.runtime.tree.ErrorNode;
     import org.antlr.v4.runtime.tree.TerminalNode;
@@ -112,6 +118,8 @@ multiplication and separate that from addition.
             return answer;
         }
     }
+\end{verbatim}
+}
 
 Now we don't need a program method at all. Instead we implement a method for
 each production separately.
@@ -143,6 +151,8 @@ discussion.
 The first step is to separate out the tokens, with the idea that
 we could use them for multiple languages. It's also for tidiness.
 
+{\footnotesize
+\begin{verbatim}
     lexer grammar CommonLexerRules ;
 
     ID : [a-zA-Z]+ ;
@@ -153,6 +163,8 @@ we could use them for multiple languages. It's also for tidiness.
     DIV : '/' ;
     ADD : '+' ;
     SUB : '-' ;
+\end{verbatim}
+}
 
 This is declared as a lexer grammar. That means it can have only
 tokens (which must be capitalized).
@@ -174,6 +186,8 @@ to expand the ID definition to include what Java or JavaScript allows.
 
 \section{Grammar}
 
+{\footnotesize
+\begin{verbatim}
     grammar Expr;
     import CommonLexerRules;
     
@@ -190,6 +204,8 @@ to expand the ID definition to include what Java or JavaScript allows.
          | ID                           # id
          | '(' expr ')'                 # parens
          ;
+\end{verbatim}
+}
 
 Since the tokens are in a separate file, we need an import to bring them
 in.
@@ -215,8 +231,12 @@ This creates a method called op on the context so we see which one matched.
 
 With this grammar we can recognize programs like this:
 
+{\footnotesize
+\begin{verbatim}
     x = 5
     3 + 2 * x
+\end{verbatim}
+}
 
 The first line is an assignment. The second will print 13.
 
@@ -227,18 +247,26 @@ like that. Thankfully, antlr and many other tools handle it well.
 To see how we did, we can build and run. First, alter your build.gradle
 file. Look for the generateGrammarSource block. Make it look like this:
 
+{\footnotesize
+\begin{verbatim}
     generateGrammarSource {
         arguments += ["-visitor", "-no-listener", "-long-messages"]
     }
+\end{verbatim}
+}
 
 Then run
 
+{\footnotesize
+\begin{verbatim}
     gradle build
     cd build/classes/java/main
     grun Expr program -tree -gui
     x = 5
     3 + 2 * x
     CTRL-D (unix) or CRTL-Z (windows)
+\end{verbatim}
+}
 
 Requesting visitor and no-listener will move us to the vistor pattern.
 Then the various methods that walk the parse tree will have more control
@@ -247,6 +275,8 @@ will remove the need for a getAnswer method in the interpretter.
 
 \section{Driving with Visitor}
 
+{\footnotesize
+\begin{verbatim}
     import org.antlr.v4.runtime.*;
     import org.antlr.v4.runtime.tree.*;
     
@@ -273,6 +303,8 @@ will remove the need for a getAnswer method in the interpretter.
             Integer answer = runner.run(fileName);
         }
     }
+\end{verbatim}
+}
 
 The structure is similar. Note that the run methods now return the answer.
 The setup is similar in the CharStream run method. But, our code will
@@ -282,6 +314,8 @@ now perform visit directly given a parse tree.
 
 That structure allows for tests like this:
 
+{\footnotesize
+\begin{verbatim}
     import org.antlr.v4.runtime.*;
     
     import org.junit.*;
@@ -333,6 +367,8 @@ That structure allows for tests like this:
             assertEquals(11, answer);
         }
     }
+\end{verbatim}
+}
 
 The assign test is typical. It looks just like our prior tests, except
 that we receive as a return value instead of having to ask for the answer.
@@ -353,10 +389,14 @@ control the order of those visits. This is control at the expense of effort.
 
 The easiest method is the one for INT.
 
+{\footnotesize
+\begin{verbatim}
         @Override
         public Integer visitInt(ExprParser.IntContext ctx) {
             return Integer.valueOf(ctx.INT().getText());
         }
+\end{verbatim}
+}
 
 It asks the context for the text in the INT token, converts that
 to an Integer, which it returns.
@@ -365,7 +405,11 @@ The ID method is similar, but needs to look up the value of the variable.
 We keep the values of variables in a symbol table. Since our language
 only has one type, we don't need anything more than a map.
 
+{\footnotesize
+\begin{verbatim}
     Map<String, Integer> symbolTable = new HashMap<>();
+\end{verbatim}
+}
 
 Note that I avoided the need for an explicit constructor by building
 an empty hash map while declaring this.
@@ -374,6 +418,8 @@ There are two productions that use this table: assign and ID. The visitId
 method will complain if the variable is not in the table. That is, you ought
 to assign a value to the variable first.
 
+{\footnotesize
+\begin{verbatim}
     @Override
     public Integer visitId(ExprParser.IdContext ctx) {
         String id = ctx.ID().getText();
@@ -386,6 +432,8 @@ to assign a value to the variable first.
             return 0;
         }
     }
+\end{verbatim}
+}
 
 You have to decide how you want to handle errors. It would certainly
 be appropriate to throw and exception here instead of merely warning
@@ -397,6 +445,8 @@ give a value, to name two).
 
 The assign method puts variables into the table.
 
+{\footnotesize
+\begin{verbatim}
     @Override
     public Integer visitAssign(ExprParser.AssignContext ctx) {
         String id = ctx.ID().getText(); // get the variable name
@@ -405,6 +455,8 @@ The assign method puts variables into the table.
         symbolTable.put(id, value);     // store the variable in the symbol table
         return value;
     }
+\end{verbatim}
+}
 
 Here we finally see the need to visit the children instead of just looking
 up the lexemes in the tokens\footnote{A token is the thing defined in the grammar
@@ -421,6 +473,8 @@ Print and parentheses are similar and straightforward. They just need the
 value from visiting their children. Print sends that to standard output.
 Parentheses returns it to its parent.
 
+{\footnotesize
+\begin{verbatim}
     @Override
     public Integer visitPrintExpr(ExprParser.PrintExprContext ctx) {
         Integer value = visit(ctx.expr());
@@ -432,6 +486,8 @@ Parentheses returns it to its parent.
     public Integer visitParens(ExprParser.ParensContext ctx) {
         return visit(ctx.expr());
     }
+\end{verbatim}
+}
 
 When it is time to visit a child, the visit in the parent method
 explicitly calls visit (inherited) passing it the child to visit.
@@ -440,6 +496,8 @@ Again this allows us full control of the order of visiting the children.
 The only other methods are for the binary operations. There are two
 of these (antlr's rule: one visit method per named production).
 
+{\footnotesize
+\begin{verbatim}
     @Override
     public Integer visitMulDiv(ExprParser.MulDivContext ctx) {
         Integer left = visit(ctx.expr(0));
@@ -465,6 +523,8 @@ of these (antlr's rule: one visit method per named production).
             return left - right;
         }
     }
+\end{verbatim}
+}
 
 In the grammar we named the literal token for the operator
 as op. That becomes a field (not a method) of the context object.
@@ -477,8 +537,12 @@ own version) when you write these methods.
 
 With all that in place we can type
 
+{\footnotesize
+\begin{verbatim}
     gradle build
     java -jar build/libs/app.jar program.file.name
+\end{verbatim}
+}
 
 Note that the tests will already have run. If they fail, gradle will not
 build the jar.

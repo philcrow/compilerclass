@@ -8,7 +8,11 @@ antlr. As we go, we'll add more features.
 
 If we put this program into a text file:
 
+{\footnotesize
+\begin{verbatim}
     4+5
+\end{verbatim}
+}
 
 we want our end result to be 9 printed on the screen.
 
@@ -21,13 +25,17 @@ the directories where input files live. It is best not to fight the tool.
 First make a directory for the work we are about to begin. I'll call mine
 app. Then make this structure under that:
 
+{\footnotesize
+\begin{verbatim}
     app
-    └── src
-        ├── main
-        │   ├── antlr
-        │   └── java
-        └── test
-            └── java
+    +-- src
+        +-- main
+        |   +-- antlr
+        |   +-- java
+        +-- test
+            +-- java
+\end{verbatim}
+}
 
 In the app directory, place a build.gradle file. You can use mine.
 Look for me on github (https://github.com/philcrow). Look for compilerclass.
@@ -60,9 +68,13 @@ As things become more complex this becomes cumbersome (or impossible).
 For now our we can create a single file called Calc.g4 under
 src/main/antlr with this content:
 
+{\footnotesize
+\begin{verbatim}
     grammar Calc;
     program : NUMBER '+' NUMBER ;
     NUMBER : [0-9] ;
+\end{verbatim}
+}
 
 As with Java, the name of the grammar on the first line (Calc) must
 match the file name (Calc.g4).
@@ -89,9 +101,13 @@ number. Again, the semi-colon is tell antlr that the rule is finished.
 
 To make our language, we run a few commands at a command prompt:
 
+{\footnotesize
+\begin{verbatim}
     gradle build
     cd build/classes/java/main
     grun Calc program -gui -tokens -tree adder
+\end{verbatim}
+}
 
 where adder is a text file with a legal program in our language like 4+5.
 You may notice errors when this runs. We have some issues to resolve.
@@ -103,10 +119,14 @@ the program. We have only parsed it.
 In the picture that grun generates you can see the tree as antlr built
 it from the grammar.
 
+{\footnotesize
+\begin{verbatim}
        program
          /|\
         / | \
        4  +  5
+\end{verbatim}
+}
 
 This tells us that it saw a program. There are three elements to the
 program, each becomes a child node of the root program node. These
@@ -119,22 +139,34 @@ What antlr actually built was a set of files. Gradle put everything
 antlr built in the bin directory. There are a lot of artifacts. If you
 want rid of them you can type
 
+{\footnotesize
+\begin{verbatim}
     gradle clean
+\end{verbatim}
+}
 
 That will remove the build directory.
 
 Under build, we are most interested in the code antlr made for us to
 use directly. This is found under
 
+{\footnotesize
+\begin{verbatim}
     build/generated-src/antlr/main
+\end{verbatim}
+}
 
 There we see both helper files (which are of little interest) and
 java files. The java files are
 
+{\footnotesize
+\begin{verbatim}
     CalcBaseListener.java
     CalcLexer.java
     CalcListener.java
     CalcParser.java
+\end{verbatim}
+}
 
 Unless we are debugging problems with tokens, we won't need CalcLexer.
 The other three need some explanation.
@@ -155,6 +187,8 @@ the runs another program a line at a time. I initially created by copying
 from CalcBaseListener.java. Then I renamed things and removed unwanted
 things.
 
+{\footnotesize
+\begin{verbatim}
     import org.antlr.v4.runtime.ParserRuleContext;
     import org.antlr.v4.runtime.tree.ErrorNode;
     import org.antlr.v4.runtime.tree.TerminalNode;
@@ -173,6 +207,8 @@ things.
             return answer;
         }
     }
+\end{verbatim}
+}
 
 I kept the imports from CalcBaseListener.
 
@@ -222,6 +258,8 @@ effect. Write tests as you go. Life will be better.
 Even though I didn't write the test first, I'll show it first so you
 can see the structure of what we are doing.
 
+{\footnotesize
+\begin{verbatim}
     import org.antlr.v4.runtime.*;
     
     import org.junit.*;
@@ -237,6 +275,8 @@ can see the structure of what we are doing.
             assertEquals(9, answer);
         }
     }
+\end{verbatim}
+}
 
 There are includes for antlr, and junit. I'm using junit 4 since I have
 had an easier time configuring and using it. Feel free to use any
@@ -266,6 +306,8 @@ Again, the structure is helpful for testing. We don't want to just print
 the answer. That would require the test to collect standard input which
 is tedious at best.
 
+{\footnotesize
+\begin{verbatim}
     import org.antlr.v4.runtime.*;
     import org.antlr.v4.runtime.tree.*;
     
@@ -310,6 +352,8 @@ is tedious at best.
             System.out.println( "answer: " + answer);
         }
     }
+\end{verbatim}
+}
 
 In the main method, we expect the file name to be the only argument
 supplied when a user runs the program. That file needs to contain
