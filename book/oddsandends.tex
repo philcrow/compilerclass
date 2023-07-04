@@ -6,7 +6,11 @@ It is not right to include negative numbers directly, because the unary negation
 operator can be confused with the subtraction operator. This causes problems
 with expressions like this:
 
+{\footnotesize
+\begin{verbatim}
     8-7
+\end{verbatim}
+}
 
 If we leave the minus sign in our definition of NUMBER, the lexer will
 grab -7 as a NUMBER in that expression. This will result in a missing
@@ -17,7 +21,11 @@ tokens would work for the parser. The parse just fails.
 
 Had we written this with some space, our original approach would work:
 
+{\footnotesize
+\begin{verbatim}
     8 - 7
+\end{verbatim}
+}
 
 As long as there is a space between the minus sign and the number,
 the lexer cannot combine them into a NUMBER token. Some languages would
@@ -26,9 +34,13 @@ that surprise programmers who then say mean things about the language.
 
 The correct solution is to introduce a new expr to the grammar.
 
+{\footnotesize
+\begin{verbatim}
     expr : '-' expr                     # unaryNegation
          | expr op=(MUL|DIV) expr       # MulDiv
          ... As before
+\end{verbatim}
+}
 
 This operator has extraordinary precedence. It will win over subtraction
 if there is a dispute. But, it also separates the literal minus
@@ -70,15 +82,23 @@ started.
 
 Finding the line is easier. For example, you could start visitAssign this way:
 
+{\footnotesize
+\begin{verbatim}
     public Node visitAssign(ExprParser.AssignContext ctx) {
         int lineNumber = ctx.getStart().getLine();
+\end{verbatim}
+    }
 
 When this assignment goes awry it will be because of the ID. Since you know its
 name, your user may not care to know exactly where it was seen on the line.
 But, if you wanted to know, you could dig to find out.
 
+{\footnotesize
+\begin{verbatim}
     Token idToken = ctx.ID().getToken();
     int beginningCharOnLine = idToken.getCharPositionInLine();
+\end{verbatim}
+}
 
 To retrieve the lexeme, we have already been calling getText. We can use
 the length that string to determine the ending position of the ID when we

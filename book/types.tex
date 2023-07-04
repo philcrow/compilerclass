@@ -32,10 +32,14 @@ As a first step we need to define what we mean by a floating
 point number. How we will recognize it with a token?
 Here are some of the things we want to be floating point numbers:
 
+{\footnotesize
+\begin{verbatim}
     1.2
     0.2
     45.
     .15
+\end{verbatim}
+}
 
 For now, we'll avoid numbers that need exponents. Many languages
 include things like 6.02e23. We'll leave that as an exercise.
@@ -49,15 +53,21 @@ extensively in grammars. It works in regular expressions too.
 Let me list the pieces along with what they match. Then,
 we'll combine them.
 
-    To Match   Use                     In English
-    .15        '.' [0-9]+              a dot, then one or more digits
-    0.2        '0' '.' [0-9]+          a zero, a dot, and one or more digits
-    14.12      [1-9][0-9]* '.' [0-9]*  any digit by zero, any number of digits,
-    45.                                a dot, more optional digits
+\begin{tabular}{l l l}
+To Match  & Use                    & In English \\
+.15       & '.' [0-9]+             & a dot, then one or more digits \\
+0.2       & '0' '.' [0-9]+         & a zero, a dot, and one or more digits \\
+14.12     & [1-9][0-9]* '.' [0-9]* & any digit by zero, any number of digits, \\
+45.       &                        & a dot, more optional digits \\
+\end{tabular}
 
 Putting these together we have a new lexer definition:
 
+{\footnotesize
+\begin{verbatim}
     FLOAT: '-'? ( '.' [0-9]+ | '0' '.' [0-9]+ | [1-9][0-9]* '.' [0-9]* )
+\end{verbatim}
+}
 
 For now, we'll keep the possibiity of the numbers themselves being
 negative. (Again, we really need unary negation.) Also, we have
@@ -70,8 +80,12 @@ Once we have a definition of what will count as a floating point
 number, it is trivial to add them to the grammar. It is just another
 expression alternative.
 
+{\footnotesize
+\begin{verbatim}
     expr : ...
          | FLOAT        # float
+\end{verbatim}
+}
 
 This adds a visitFloat method to the parse tree walk. We'll need FloatNode
 to go with that.
@@ -94,6 +108,8 @@ In addition to typing variables, we need types in two other places.
 First, in the parameters to functions. Second, for the return values
 of those functions. Here is the new definition of statement:
 
+{\footnotesize
+\begin{verbatim}
     statement : 'print' expr NEWLINE                            # printExpr
               | type ID NEWLINE                                 # declare
               | type ID '=' expr NEWLINE                        # declareAssign
@@ -104,13 +120,19 @@ of those functions. Here is the new definition of statement:
               | 'return' expr                                   # return
               | NEWLINE                                         # blank
               ;
+\end{verbatim}
+}
 
 There are two new statement alternatives: one for bare declaration, one for
 declaration with assignment. The function alternative has a new ':' type
 addition for the return value. You could choose to use the Java approach
 instead, by listing the type before the function name.
 
+{\footnotesize
+\begin{verbatim}
     type : 'int' | 'float' ;
+\end{verbatim}
+}
 
 I chose the familar int and float types. They may confuse the Java developer,
 because float will be implemented with Double. Since we are implementing in
@@ -124,17 +146,23 @@ proper definitions with parameter lists.
 The final alteration to the grammar is in the definition of paramList.
 Now that parameters need a type, they need a rule.
 
+{\footnotesize
+\begin{verbatim}
     paramList : param ',' paramList
               | param
               ;
 
     param : type ID ;
+\end{verbatim}
+}
 
 \section{Symbols}
 
 With symbols that have types, we need a class to describe them. Like Nodes,
 each type of symbol will inherit from this abstract class.
 
+{\footnotesize
+\begin{verbatim}
     public abstract class Symbol {
         String name;
         SymbolType type;
@@ -180,6 +208,8 @@ each type of symbol will inherit from this abstract class.
             FUNCTION
         }
     }
+\end{verbatim}
+}
 
 At the bottom is the SymbolType. We make an entry there for
 each type. The core facts of all symbols are then a name and a type.
@@ -199,6 +229,8 @@ other reasonable designs.
 The subclasses themselves are really just houses for a value.
 Here is the class for ints. The others are similar.
 
+{\footnotesize
+\begin{verbatim}
     public class IntSymbol extends Symbol {
         Integer value;
     
@@ -241,11 +273,15 @@ Here is the class for ints. The others are similar.
             return "int " + getName() + " " + getIntValue();
         }
     }
+\end{verbatim}
+}
 
 \section{Symbol Tables}
 
 The Symbol objects will live in a SymbolTable.
 
+{\footnotesize
+\begin{verbatim}
     import java.util.HashMap;
     import java.util.Map;
     
@@ -290,6 +326,8 @@ The Symbol objects will live in a SymbolTable.
             return sb.toString();
         }
     }
+\end{verbatim}
+}
 
 The table itself is a Map, specifically a HashMap. When you construct a new
 one, you pass in the parent. This allows us to chain the tables. More on
@@ -322,6 +360,8 @@ can see everything. This is great for debugging.
 In my approach, the interpreter knows all about the symbol tables. It keeps the
 root table for globals and facilitates all actions on tables. These are the helpers.
 
+{\footnotesize
+\begin{verbatim}
 public class EvalVisitor extends ExprBaseVisitor<Node> {
     SymbolTable symbols = SymbolTable.generateGlobalSymbolTable();
 
@@ -358,6 +398,8 @@ public class EvalVisitor extends ExprBaseVisitor<Node> {
     public void dumpSymbolTables() {
         System.err.println( "Symbols:\n" + symbols.toString());
     }
+\end{verbatim}
+}
 
 The symbols variable always points to the top of the symbol table stack.
 It starts with the parentless root for globals during class initialization.
@@ -407,6 +449,8 @@ The CallNode needs changes to account for typed parameters.
 
 Bare declarations are compile only. You don't need to store for those.
 
+{\footnotesize
+\begin{verbatim}
     @Override
     public Node visitDeclare(ExprParser.DeclareContext ctx) {
         String type = ctx.type().getText();
@@ -415,6 +459,8 @@ Bare declarations are compile only. You don't need to store for those.
         declare(type, id);
         return null;
     }
+\end{verbatim}
+}
 
 We lookup the type and the id, then use the declare helper. There
 is a bug here. Either we need to require values when variables
@@ -424,6 +470,8 @@ declaration so it can be added to the function's symbol table.
 For declarations providing initial values, we do something similar,
 but return an AssignNode.
 
+{\footnotesize
+\begin{verbatim}
     @Override
     public Node visitDeclareAssign(ExprParser.DeclareAssignContext ctx) {
         String type = ctx.type().getText();
@@ -433,11 +481,15 @@ but return an AssignNode.
         declare(type, id);
         return new AssignNode(id, valueNode, this);
     }
+\end{verbatim}
+}
 
 Defining functions is also a compile time activity. We don't want them
 in the runtime tree lest they run by accident. There several changes
 to visitFunctionDefinition.
 
+{\footnotesize
+\begin{verbatim}
     @Override
     public Node visitFunctionDefiniton(ExprParser.FunctionDefinitonContext ctx) {
         List<Parameter> parameters = collectParameters(ctx.paramList());
@@ -454,6 +506,8 @@ to visitFunctionDefinition.
 
         return null;
     }
+\end{verbatim}
+}
 
 The collection of parameters is only cosmetically different here. The list is of
 type Parameter instead of String. There is more work in collectParameters as we
@@ -471,6 +525,8 @@ Now that there are two types, callers could be expecting an int or a float
 to come back from a function. As with other cases, we are happy to deliver
 an int as a float, but using a float as an int is an error.
 
+{\footnotesize
+\begin{verbatim}
     import java.util.List;
     
     public class CallNode extends Node {
@@ -568,6 +624,8 @@ an int as a float, but using a float as an int is an error.
             return "call " + functionName + "(" + arguments + ")";
         }
     }
+\end{verbatim}
+}
 
 The attibutes, constructor and act methods are unchanged. That latter still does nothing.
 Both getIntValue and getFloatValue work similarly. The only difference in structure
@@ -597,7 +655,7 @@ would look in the top frame on the call stack for the line number to jump to.
 
 The return statment puts the return value into the symbol table in a location
 with an illegal name, to avoid colliding with programmer code. That symbol
-name is ReturnNode.RETURN_SYMBOL. Once we are holding that, it is time
+name is \verb+ReturnNode.RETURN_SYMBOL+. Once we are holding that, it is time
 to pop the symbol table off the stack and give back the value.
 
 Exercises
