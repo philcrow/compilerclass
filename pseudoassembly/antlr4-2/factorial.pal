@@ -1,5 +1,5 @@
     n:         alloc      1
-    original   alloc      1
+    original:  alloc      1
     answer:    alloc      1
 
                prompt     "Enter and integer n, I'll find n! ->"
@@ -18,5 +18,6 @@
                move       n     %regA
                subt       1.0   %regA
                move       %regA n
+               shower
                gosub      fact
     base:      ret

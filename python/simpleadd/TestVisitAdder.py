@@ -6,7 +6,6 @@ import unittest
 
 class TestVisitAdder(unittest.TestCase):
     def test_adding(self):
-        print("About to test")
         input_stream = InputStream("3+4")
         lexer = CalcLexer(input_stream)
         stream = CommonTokenStream(lexer)

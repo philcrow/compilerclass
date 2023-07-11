@@ -1,0 +1,12 @@
+Could the children just use free registers at will,
+put their result into a pseudo-register name like outputreg?
+Then the parent would reserve a register for that output before calling,
+replace 'outputreg' with the reserved register when
+the child call returns. Children would return their used registers to
+the free stack. Binary ops would need to reserve
+for themselves and once for each child (left and right).
+
+At the top of visitProgram, populate a global Stack<String>
+with the general purpose register names available.
+Anyone who wants one will pop, store until finished with it,
+then push.

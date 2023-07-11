@@ -1,0 +1,10 @@
+hours:      alloc   1
+
+            prompt  "Enter hours worked -> "
+            take    hours
+            brgt    hours   40.0    overtime
+regular:    prompt  "You only get regular pay"
+            jump    finish
+overtime:   prompt  "You deservere overtime"
+finish:     shower
+            end     0

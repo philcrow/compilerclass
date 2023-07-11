@@ -9,7 +9,10 @@ install program).
 
 You can alias those as python and pip.
 
-## Get the ANTLR runtime for Python
+## Get ANTLR and its runtime for Python
+
+Download the current version of antlr-4.10.1-complete.jar from
+antlr.org.
 
 pip3 install antlr4-python3-runtime
 

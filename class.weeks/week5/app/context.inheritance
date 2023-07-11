@@ -1,0 +1,6 @@
+AssignContext is available to the visitAssign method, we need the line number.
+
+AssignContext
+    StatementContext
+        ParserRuleContext
+            start returns Token which has getLine()

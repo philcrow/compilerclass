@@ -1,0 +1,40 @@
+8-7 is failing to scan correctly
+the scanner is taking -7 as an int leaving no operator
+moving SUB : '-' above the INT rule didn't help, since -7 is two chars not one
+
+Unaccepted stack overflow:
+https://stackoverflow.com/questions/48694645/antlr-4-how-to-handle-unary-negative-numbers
+Switch to unary negation as an expression. List it first, don't put the
+negative on the INT (or FLOAT).
+grammar calcGrammar;
+input : expression EOF;
+expression :
+    MINUS expression #unaryMinusExpr
+    | expression op=(MULTIPLY | DIVIDE) expression #multiplicationExpr
+    | expression op=(MINUS | ADD) expression #additiveExpr
+    | NUMBER #num
+    ;
+
+NUMBER : [0-9]+ ;
+DOUBLE : NUMBER '.' NUMBER;
+
+LPAR  : '(';
+RPAR  : ')';
+ADD : ('+');
+MINUS : ('-');
+DIVIDE : ('/');
+MULTIPLY : ('*');
+
+Unaccepted stack overflow:
+https://stackoverflow.com/questions/34368305/antlr-calculator-with-negative-numbers-support
+You can use a negation expression , not a negation number. For example :
+
+additiveExpr
+    :   multExpr (('+' |'-' ) multExpr )*;
+multExpr
+    :   negationExpr (('*' |'/' ) negationExpr )*;
+negationExpr
+    :   ('-')? primary;
+primary
+    :   atom
+    |  '(' orExpr ')';

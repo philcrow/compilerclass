@@ -1,0 +1,9 @@
+count:      alloc   1
+            move    10.0    count
+loop:       brle    count   0.0   liftoff
+            prt     count
+            move    count   %regA
+            subt    1.0     %regA
+            move    %regA   count
+            jump    loop
+liftoff:    prompt "Liftoff!"

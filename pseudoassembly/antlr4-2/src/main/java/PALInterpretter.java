@@ -191,8 +191,8 @@ public class PALInterpretter extends PALBaseListener {
 
     @Override
     public void enterBranch(PALParser.BranchContext ctx) {
-        PALOperand op1 = PALOperand.getOperandInstance(ctx.left, this);
-        PALOperand op2 = PALOperand.getOperandInstance(ctx.right, this);
+        PALOperand op1 = PALOperand.getSourceInstance(ctx.left, this);
+        PALOperand op2 = PALOperand.getSourceInstance(ctx.right, this);
         PALOperand op3 = PALOperand.getOperandInstance(ctx.dest, this);
 
         commands.add(new PALBranchNode(

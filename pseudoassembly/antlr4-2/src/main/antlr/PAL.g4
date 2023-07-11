@@ -26,7 +26,7 @@ command : alloc
 
 alloc     : 'alloc' INT ;
 add       : 'add' source register ;
-branch    : operator left=operand right=operand dest=operand;
+branch    : operator left=source right=source dest=operand;
 div       : 'div' source register ;
 end       : 'end' INT ;
 jump      : 'jump' operand;

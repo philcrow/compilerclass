@@ -1,0 +1,11 @@
+x: alloc 1
+
+move 4.0 %regA
+move %regA x
+move 3.0 %regB
+move x %regC
+move 2.0 %regA
+mult %regC %regA
+add %regB %regA
+prt %regA
+

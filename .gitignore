@@ -8,3 +8,7 @@ build
 .gradle
 litter
 litter2
+.classpath
+.project
+.settings
+*.zip

@@ -1,0 +1,19 @@
+ProgramNode
+    List<Node> statements
+
+AssignNode
+    String Symbol
+    Node valueNode
+
+PrintNode
+    Node valueNode
+
+AddNode (SubtractNode, MulitplyNode, DivdideNode)
+    Node left
+    Node right
+
+IdNode
+    String Symbol
+
+IntNode
+    Integer value

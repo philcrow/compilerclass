@@ -1,5 +1,4 @@
 grammar Expr;
-import CommonLexerRules;
 
 program : statement+ ;
 
@@ -14,3 +13,13 @@ expr : expr op=('*'|'/') expr       # MulDiv
      | ID                           # id
      | '(' expr ')'                 # parens
      ;
+
+ID : [a-zA-Z]+ ;
+INT : '-'? [0-9]+ ;
+NEWLINE : '\r'? '\n' ;
+WS : [ \t] -> skip ;
+
+MUL : '*' ;
+DIV : '/' ;
+ADD : '+' ;
+SUB : '-' ;
