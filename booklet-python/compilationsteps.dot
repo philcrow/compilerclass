@@ -1,0 +1,40 @@
+digraph {
+    //graph [ rankdir = "LR" ]
+    node [ shape=box ]
+
+    source -> lexer [label="char\nstream"]
+
+    parser [label="Parser"]
+
+    lexer -> parser [label="tokens"]
+
+    interpreter [label="Interpreter\nOR\nBack End"]
+
+    parser -> interpreter [label="AST"]
+
+    // second row
+
+    semantics [label="Semantic\nEnforcers"]
+    optimizers [label="Optimizers"]
+
+    semantics -> optimizers [label="Internal\nRpresentation"]
+
+    emit [label="Emitter"]
+
+    optimizers -> emit [label="IR"]
+
+    assembler [label="Assembler"]
+
+    emit -> assembler [label="Assembly"]
+
+    link [ label="Linker"]
+
+    assembler -> link [label="object\nfile"]
+    end [label="End\nUser"]
+
+    link -> end [label="executable"]
+
+    source [label="Source\nFile"]
+    lexer  [label="Lexer"]
+
+}

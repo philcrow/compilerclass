@@ -1,0 +1,347 @@
+\chapter{Functions}
+
+It is often said that functions\footnote{There are other similar
+concepts: methods, subroutines, procedures. Our language will only
+have the kind that can return one valus. Since we aren't implementing
+objects, these are correctly called functions. But, the ideas apply
+to the others.} are primarily to encourage re-use. In reality
+we write them to name operations and move them out of the flow
+of the program. This makes it easier to read and maintain the code
+and gives us small points to test.
+
+In any case, the function is a key feature of a good language. A way
+to move control to a separate point and (optionally) get something
+in return.
+
+\section{Goal}
+
+Now it is time to have some fun. I teased the syntax for our functions
+in the symbol table chapter. Here is an example.
+
+{\footnotesize
+\begin{verbatim}
+    fun fact(n) {
+        if (n == 1) {
+            return 1
+        }
+        else {
+            return n * fact(n - 1)
+        }
+    }
+    answer = fact(4)
+    answer
+\end{verbatim}
+}
+
+I have reiterated answer on a solo line so visitPrint will show the final
+number. Assignments don't print.
+
+\section{Grammar Additions}
+
+There are two new statements in that short example: a function
+definition and a return. Once the function is defined, we also
+need a new expression to call it.
+
+{\footnotesize
+\begin{verbatim}
+    statement: ...
+             | 'fun' ID '(' params ')' block       # fun
+             | 'return' expression NL              # return
+\end{verbatim}
+}
+
+The fun keyword and the parentheses are literal. We will use
+the same ID as for variables (lowercase letters, or whatever
+improvement you have made on that). We will also use the block
+defined for if/else and while.
+
+For return, we have a new keyword and can reuse the expression rule.
+
+That leaves only params in need of a definition.
+
+{\footnotesize
+\begin{verbatim}
+    params: ID (',' ID)* ;
+\end{verbatim}
+}
+
+This definition means that all of our functions will require at
+least one parameter. You could make a different choice.\footnote{There
+is an exercise to change this.}
+
+Now we need a new expression to make a function call.
+
+{\footnotesize
+\begin{verbatim}
+    expression: ...
+              | ID '(' args ')'                       # call
+\end{verbatim}
+}
+
+That requires a new rule for args. The ID will be the name from
+the function definition.
+
+{\footnotesize
+\begin{verbatim}
+    args: expression (',' expression)* ;
+\end{verbatim}
+}
+
+This is analogous to the parameter list (and also requires at least
+on thing to be passed to the function). But, these are values not names.
+Even if we pass variable names, our call will resolve them to values
+before giving them to the function. Some languages allow a pass by
+reference semantic. Then the parameter becomes an alias for the variable
+in question, allowing the function to alter its value as a side effect.
+Our language is simpler than that.
+
+\section{Implementation}
+
+The first key feature of functions is that they don't run when we
+first see them. Something else needs to call them. Thus, we need
+to store each function definition. Plenty of languages treat functions
+as symbols and put them in the standard symbol table. We could do that
+here, but it wouldn't allow us to switch to an explicitly typed
+language like Java. There a symbol table can only store one type and
+we have already chosen integer for our variable.
+
+\subsection{Storing Fun}
+
+The simplest way to handle storing functions is to make a separate
+dictionary. The key will be the name of the function. The value
+will be a new Fun object described here.
+
+In the Visitor constructor, add a dictionary
+
+{\footnotesize
+\begin{verbatim}
+    class Visitor(CalcVisitor):
+        def __init__(self):
+            self.global_table = SymbolTable(None, None)
+            self.symbol_table = self.global_table
+            self.fun = {}
+\end{verbatim}
+}
+
+In visitFunction we create a new Fun object and store
+it.\footnote{I'm still returning an integer here with kind thoughts to
+anyone implementing in language which demands that each visitor return
+the same type, like Java.}
+
+{\footnotesize
+\begin{verbatim}
+        def visitFun(self, ctx:CalcParser.FunContext):
+            name = ctx.ID().getText()
+            self.fun[name] = Fun(ctx.params(), ctx.block())
+            return 0
+\end{verbatim}
+}
+
+We'll see the Fun class a bit later. Once we have functions available,
+we need two more things: return and call.
+
+\subsection{Returning Fun}
+
+When we encounter a return statement in a function, we need to compute
+the returned value expression, store that in a convenient place,
+and jump back to the calling location. In languages like assembly,
+statements are numbered. When you make a call, you stash the number
+of the calling location in the call stack frame. The return pulls that
+out and uses it. We don't have that notion here.
+
+We have choices for how to go back to the invocation point. The one
+that seems simplest to me is to raise an exception. This is also in
+keeping with a pythonic view of exceptions: they are just there
+to help us control flow.
+
+{\footnotesize
+\begin{verbatim}
+        def visitReturn(self, ctx:CalcParser.ReturnContext):
+            answer = self.visit(ctx.expression())
+            self.symbol_table.set("0retval", answer)
+            raise  ReturnException()
+\end{verbatim}
+}
+
+The value to return is obtained by visiting the expression, just as
+we did in visitAssign. We need a place for the value to ride back to the
+caller. I chose to hide it in the symbol table, by using an illegal
+variable name. Our grammar will not allow the user to begin a variable
+name with zero, so I can safely insert there.
+
+When I raise my exception, I want it to be unique. I don't want the
+caller to confuse a regular return statement with an actual problem
+(like an undefined variable). So, I made a new exception class
+
+{\footnotesize
+\begin{verbatim}
+    class ReturnException(Exception):
+        pass;
+\end{verbatim}
+}
+
+I inherit all behavior from the Exception base class and have nothing
+to do in my class. Python requires me to explicitly say there is nothing
+to do with its pass statement. The only step left is to import this
+into the Visitor:
+
+{\footnotesize
+\begin{verbatim}
+    from ReturnException import ReturnException
+\end{verbatim}
+}
+
+\subsection{Calling Fun}
+
+{\footnotesize
+\begin{verbatim}
+        def visitCall(self, ctx:CalcParser.CallContext):
+            name = ctx.ID().getText()
+            fun = self.fun[name]
+            args = ctx.args()
+
+            self.symbols = self.symbol_table.addFunctionScope(self.global_table)
+            answer = fun.call(self, args)
+            self.symbols = self.symbol_table.discardFunctionScope()
+            return answer
+\end{verbatim}
+}
+
+When a call expression is reached, it needs to retrieve the function's
+name (using ID on the context object). Then retreive the fun from the
+dictionary. It also needs to grab the context object for the args
+from the CallContext.
+
+Before the call, I need to have the symbol table make a new scope so
+the function can't see the caller's variables unless they are global.
+After the call, I need to restore the original symbol table.
+
+The Fun class has a call method that does the work and delivers the
+answer. I need to store and return that so the calling expression can
+use it.
+
+\subsection{The Fun Class}
+
+We've now seen the API for the Fun class. It needs a constructor which
+receives and stores a ParamsContext object and a BlockContext object.
+It has a call method to invoke the function. That receives the Visitor object
+and the ArgsContext object. The call method will populate the newly constructed
+symbol table with values for the named parameters from
+the arguments. Once the symbols have their values, it can visit the block.
+
+{\footnotesize
+\begin{verbatim}
+    import sys
+    from ReturnException import ReturnException
+
+    class Fun:
+        def __init__(self, params_ctx, block_ctx):
+            self.param_ctx = params_ctx
+            self.block_ctx = block_ctx
+\end{verbatim}
+}
+
+When things go wrong, I want to exit the program with an error. I could
+raise an exception, but that spews a stack trace. When I am ready to
+return, I will raise a ReturnException, so I need to import it.
+
+The constructor stores the received parameters.
+
+The call method places the arguments into the symbol table using the
+formal parameter names.
+
+{\footnotesize
+\begin{verbatim}
+        def call(self, visitor, args_ctx):
+            param_names = self.get_param_names()
+            arg_values = self.get_arg_values(visitor, args_ctx)
+            param_len = len(param_names)
+            arg_len = len(arg_values)
+            if param_len != arg_len:
+                print(f"param count {param_len} != {arg_len}")
+                sys.exit(1)
+
+            for param, arg in zip(param_names, arg_values):
+                visitor.symbol_table.set(param, arg)
+
+            try:
+                visitor.visitChildren(self.block_ctx)
+            except ReturnException:
+                pass
+            return visitor.symbol_table.resolve("0retval")
+\end{verbatim}
+}
+
+I'll show the \verb+get_param_names+ and \verb+get_arg_values+ later.
+Call verifies
+that there are the same number of parameters and arguments. If not,
+it proclaims the error and exits. Again, that prevents python from
+spewing a stack trace.
+
+Python has a convenience builtin, zip, which allows us to walk
+two lists at once. For each one, I use the symbol table set method
+to install the parameter's value.
+
+Once the parameters are in place, I just asked the visitor to
+visit the children of the block context. That will execute all the
+statements. I did this in a try block, because I'm expecting the
+ReturnException.\footnote{It will actually be a fatal error not
+to have a return statement when the last line in call tries to
+resolve the 0return variable.} Any other exception is unhandled
+and will halt the program.
+
+Calling the function returns the value in 0retval, which a
+return statement placed there.
+
+Getting the list of parameter names from the ParamsContext and
+getting the values of the arguments from the ArgsContext is similar work.
+
+{\footnotesize
+\begin{verbatim}
+        def get_param_names(self):
+            param_names = []
+            for param in self.param_ctx.ID():
+                param_names.append(param.getText())
+            return param_names
+
+        def get_arg_values(self, visitor, args_ctx):
+            arg_values = []
+            for arg in args_ctx.expression():
+                arg_values.append(visitor.visit(arg))
+            return arg_values
+\end{verbatim}
+}
+
+Both methods make an empty list to return. They each walk a list
+given by a context object with for. They each append to their list and
+return it. The difference is in how what they put in the list.
+A ParamsContext has an ID method. You can call that with an index to
+get a specific ID from the list. But, if you call it without arguments,
+the context returns a list of all the ID tokens. These have a getText
+method that returns the name we want. For the args, we just ask
+the visitor to visit each arg. That will evaluate whatever expression
+is in that arg position.
+
+\section{Summary}
+
+We have now completed a language which supports arthimetic, variables,
+conditional logic, looping, and functions. There are a lot more features
+we could implement. These include: arrays, typed variables (at least
+separate integers from floating point numbers, but also consider complex
+numbers, vectors, tensors, or the like), any sort of strings.
+
+All of those possibilities are yours to implement as you like.
+I will move on to the back half of compilation in the next part.
+That is emitting instead of immediately running.
+
+\section{Exercises}
+
+\subsection{Tests}
+
+Add tests for the new features, specifically running the sample program
+from the top of the chapter.
+
+\subsection{Empty Parameter List}
+
+Change the grammar and all supporting code to allow functions that
+don't take parameters.

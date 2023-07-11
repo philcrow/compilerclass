@@ -1,0 +1,36 @@
+\chapter{Internal Representation}
+
+To this point, we have used the awesome AST built for us by ANTLR.
+While it is amazing how far we have gotten with it, there are limits.
+We need to build our own internal structure in order analyze, optimize,
+and emit full programs. In other words, to complete the back half of the
+compiler.
+
+We will again start with a minimal approach to introduce the concepts.
+The internal representation will be a graph of nodes. Ours will
+be a tree. Some optimization schemes compress this into
+a directed graph when two subtrees are identical.
+
+Each node in this tree will need to be an object of the same type.
+There will be subtypes, but they must share an ancestor.
+Traditionally, they would all share the same attributes. But, since
+we have objects instead of the more primative structures we would
+be stuck with in a language like C, we don't need to overload in that way.
+
+Each node type will need a constructor which the visitor will call to
+create one. They will also need a method that does something useful.
+Normally, that emits target lanugage output. But, it could also
+draw something useful for debugging, etc. It could even run the
+program as we have been doing.
+
+Analyzers walk the tree to enforce language rules that the parser
+can't, like missing declarations. Optimizers walk the tree to
+build an optimized replacement. Since they are making the same
+structure, just with different specific nodes, optimizers can
+be mixed and matched.
+
+To distinguish this new tree from the AST built during parsing,
+we call this a decorated tree or an internal representation (IR).
+
+\section{Nodes}
+

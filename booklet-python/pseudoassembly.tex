@@ -1,0 +1,423 @@
+\chapter{Pseudo-Assembly Language}
+
+The first time I worked through the Dragon book I wanted to get
+all the way to assembly. The problem was that I was working on this
+self study at work (where I was there to answer phones that rarely
+rang) and at home. These environments had different computer architecture.
+Thus, the assembly was different. My solution was to write my own
+assembly language. I called it the pseudo-assembly language (PAL).
+It was then written in Perl. I've later implemented it in Java
+and more recently replicated it with ANTLR in Java.
+
+There are two advantages to PAL: it is device independent and it is
+simpler than a genuine assembly. PAL has only one assembly directive
+and nineteen statements. Most assemblies are far more complex.
+
+\section{A Directive and All 19 Commands}
+
+\subsection{Memory}
+
+In a modern assembler there are segments of memory. First comes
+the global symbols, then the program data, than a chunk for
+the stack and heap. Typically the stack and heap use the same
+block of memory and grow toward each other as functions are called
+(stack expands) and dynamic variables are created (heap expands).
+
+This is a bit safer than old school assembly where the data area
+and code shared space. That allowed you to change the code with
+code. That is dangerous for sanity and security.
+
+PAL is old school. You can allocate memory whenever you want, but
+you should only do it at the top of the program. But, it has
+a separate stack for function calls. Real assembly would have
+no where to put that. Implementing in Java gives us access to its heap.
+
+The one assembly directive in PAL is alloc which takes one parameter:
+the number of slots to allocate. Each slot holds a floating point
+number. To be able to use the memory, you need to label the line.
+Every line in PAL can have an optional label which is an identifier
+followed by a colon.
+
+{\footnotesize
+\begin{verbatim}
+    x: alloc 1
+\end{verbatim}
+}
+
+This creates a labeled location in memory holding one value called x.
+
+\subsection{Convenience}
+
+Since PAL is implemented in a high level language, it is easy enough
+to print to the console and receive values from there.
+For this there are three commands: prompt (to print text messages),
+prt (to print variable values) and take (to receive and store values).
+
+{\footnotesize
+\begin{verbatim}
+    n: alloc 1
+       prompt "Enter an integer ->"
+       take n
+       prt n
+\end{verbatim}
+}
+
+This prints the prompt, receives the input, and stores it in the location
+labeled n. Then it prints it from n.
+
+That makes three of the nineteen statements.
+
+\subsection{Calculations}
+
+As with traditional assembly, current versions of PAL require that
+calculations be done in registers of which there are not many.
+For instance, to add numbers we need to first move one into a
+register, then add the other one to that register. Finally, we
+need to move the value from the register to a named location so
+we have the register free for subsequent calculations.
+
+{\footnotesize
+\begin{verbatim}
+    x: alloc 1
+    y: alloc 1
+    z: alloc 1
+
+       prompt "Enter x ->"
+       take x
+       prompt "Enter y ->"
+       take y
+       move x %regA
+       mult y %regA
+       move %regA z
+       prt z
+\end{verbatim}
+}
+
+This effects the calculation z = x + y and prints the value in z at the end.
+
+In addition to mult for multiplication, PAL offers add, subt (subtract),
+and div (for division).
+
+This is five more statements (subtotal 8).
+
+\subsection{Conditional Logic}
+
+Each conditional operation statement takes two operands to compare
+and a third operand which is a label to jump to if the comparison holds.
+
+{\footnotesize
+\begin{verbatim}
+    hours:      alloc   1
+
+                prompt  "Enter hours worked -> "
+                take    hours
+                brgt    hours   40.0    overtime
+    regular:    prompt  "You only get regular pay"
+                jump    finish
+    overtime:   prompt  "You deservere overtime"
+    finish:     end     0
+\end{verbatim}
+}
+
+This is a lot of overhead to show one new command. This asks for a value
+for hours. Then it tests to see if that value is greater than 40.
+If so, it jumps to overtime. If not, it falls through.
+When you set up logic like this, you usually need jump to avoid the
+blocks you don't want (overtime from regular pay in this case).
+The jump command is unconditional, but you should use it to implement
+standard logic structures and not to bounce around the program randomly.
+
+The end command stops the program, giving the shell that started it the
+value of the operand as a status. That must be an int.
+
+There are six conditional operators
+
+\begin{tabular}{l l}
+    Command &   Operator \\
+    brgt    &   > \\
+    brge    &   >= \\
+    brlt    &   < \\
+    brle    &   <= \\
+    breq    &   == \\
+    brne    &   != \\
+\end{tabular}
+
+All work the same way. The operator of the command is placed between
+the first two operands. If the condition is true, control jumps to
+the third operand, otherwise it falls through.
+
+That's six more commands for the conditionals, plus jump and end for
+total 8 new commands. (running subtotal 16).
+
+\subsection{Subroutines}
+
+PAL supports only a primative notion of subroutines, notably because
+all variables are global. But, it does keep a stack of call locations
+to which you can return.
+
+Consider this rather ellaborate example which computes factorial.
+
+{\footnotesize
+\begin{verbatim}
+    n:         alloc      1
+    original:  alloc      1
+    answer:    alloc      1
+
+               prompt     "Enter and integer n, I'll find n! ->"
+               take       n
+               move       n       original
+               move       1.0     %regB
+               gosub      fact
+               move       %regB   answer
+               prompt     "Factorial of"
+               prt        original
+               prompt     "is"
+               prt        answer
+               end        0
+    fact:      brle       n     1.0     base
+               mult       n     %regB
+               move       n     %regA
+               subt       1.0   %regA
+               move       %regA n
+               shower
+               gosub      fact
+    base:      ret
+\end{verbatim}
+}
+
+It starts in similar manner to prior examples. It takes a number from
+the user, stores it as original (for use in the final prt command).
+It puts the starting number one into register b, where the multiplications
+will take place.
+
+Then it uses the gosub command to transfer control to the fact label.
+The difference between gosub and jump is that the latter can include
+a ret command to go back to the calling location (or actually the
+line right after that). As this example demonstrates, you can do
+this recursively. But, again, you are stuck with global variables.
+This is the mimimum stack frame possible: only the return location is
+stored.
+
+Now we have seen the alloc directive and all nineteen of the PAL commands.
+% summary table
+
+\section{Accessing Modes and Arrays}
+
+So far we have only seen the commands with named memory locations
+holding single values and the registers. To implement arrays (which
+you could use to make your own stack for gosubs) we need addressing modes.
+These allow us to use one allocated memory location to hold the
+address of a different memory location. The allocation looks like
+this
+
+{\footnotesize
+\begin{verbatim}
+    score:  alloc 1
+    scores: alloc 5
+\end{verbatim}
+}
+
+The score here is a pointer which tells us where we are in the array
+called scores. Now you know why alloc takes an operand. These arrays
+are fixed in size.
+
+To obtain the pointer value at the top of the array, PAL uses the
+ampersand.
+
+{\footnotesize
+\begin{verbatim}
+    move    &scores     score
+\end{verbatim}
+}
+
+In this memory segment, the first word score is in location zero.
+The scores array begins at position one and continues through position
+six. So, \verb+&scores+ is one.
+
+{\footnotesize
+\begin{verbatim}
+    +---------+-----------+
+    | address | variable  |
+    +---------+-----------+
+    |       0 | score     |
+    +---------+-----------+
+    |       1 | scores[0] |
+    +---------+-----------+
+    |       2 | scores[1] |
+    +---------+-----------+
+    |       3 | scores[2] |
+    +---------+-----------+
+    |       4 | scores[3] |
+    +---------+-----------+
+    |       5 | scores[4] |
+    +---------+-----------+
+\end{verbatim}
+}
+
+This is why almost all languages index arrays from zero. Then the address
+of the first element is the address of the array. All slots are
+the address of the zero element plus the width of the memory times the index.
+Here the memory width is one. In an acutal assembly, it would be the
+width in bytes of each array element.
+
+Once we can store an address, we need a way to indicate that it is
+an address that needs to be dereferenced. PAL uses @ for that.
+Suppose score is two, to store the third element of the array we
+can use
+
+{\footnotesize
+\begin{verbatim}
+    move 2      score
+    take @score
+\end{verbatim}
+}
+
+Of course, we need to do this in a loop, as we will soon see.
+
+Finally, it is highly useful to be able to increment while we use
+the pointer in this way. For that we can add a plus sign after the
+expression: @score+. This will first use the current value of the
+score pointer, but then increment immediately after. That makes
+moving through the elements much easier.
+
+Here is an example that accepts five test scores, finds the maximum
+among them and scales all of them by dividing each by the maximum.
+This is a rescaling rule I used when I taught Math, in the dark ages
+of the prior millenium.
+
+{\footnotesize
+\begin{verbatim}
+    score:  alloc       1
+    max:    alloc       1
+    scores: alloc       5
+    
+            move        &scores     score
+            move        0.0         max
+            move        0.0         %regA
+    input:  brge        %regA       5.0         proc
+            prompt      "Enter score"
+            take        @score
+            add         1.0         %regA
+            brlt        @score      max         next
+            move        @score      max
+    next:   move        score       %regB
+            add         1.0         %regB
+            move        %regB       score
+            jump        input
+    
+    proc:   move        &scores     score
+            move        0.0         %regA
+            prompt      "num scaled_score"
+    output: brge        %regA       5.0         done
+            move        @score+     %regC
+            div         max         %regC
+            prt         %regA       %regC
+            add         1.0         %regA
+            jump        output
+    
+    done:   end         0
+\end{verbatim}
+}
+
+As in the explanation above, score is the pointer to the current
+array value, scores holds the array. These are like the diagram
+of the memory. The max slot will hold the high score, which
+becomes the divisor for all the scores in the output section.
+
+After allocating memory, move stores the address of the scores array
+in score, as we have already seen. Then zero becomes the max, to
+have a starting point. I use register A to hold the counter which
+goes from zero through four, so that I don't overflow the array.
+In an old school assembly overflowing arrays re-wrote other variables
+or even the programs instructions. These buffer overrun errors
+were the source of all sorts of problems including security breaches.
+
+The scores are collected from the user beginning at input, which
+checks to make sure we are under the limit of the array. When we
+get to five slots, it moves us to proc (short for process).
+
+While we are still collecting, the user receives an "Enter score"
+prompt. Their value is taken and stored in the array slot the score
+pointer currently references. Then, register A is incremented.
+
+With the loop managment and actual input handled, the code moves
+on to identifying the high score. The brlt comparison checks
+whether the value we have just received (@score) is less than
+the max previously recorded. If so, this is lower than the max
+and we don't need to do anything further with it, so we jump to next.
+But, if not, we need move the new value into max.
+
+This bit of logic is why we cannot yet use an incrementing addressing
+mode. Instead, beginning at next, the score pointer goes into
+register B, where it is incremented. The result is moved back
+into score. The result of those three commands is to bump the pointer
+forward by one. With pointer incremented, we jump back to the
+top of the loop, which will end if we have now exceeded the limit
+by reaching five. (Remember our array values are zero through four.)
+
+When the input loop ends, it sends us to proc to process the scores.
+There the score pointer is reset to the top of the scores array.
+Register A is also reset so that it can again count to keep
+us within the array bounds. The user sees text "\verb+num scaled_score+"
+which is the heading row of a primitive table.
+
+Having re-initialized the array mechanics, execution flows into
+output. That labeled line looks just like input, except for
+where it goes when we reach the end of the array. This one goes
+to done, to exit the program.
+
+Right below the output labeled line, we see the addressing mode.
+The value pointed to by score is moved the register C, and the
+score pointer is then post-incremented (in C source code this
+might look like: regc = scores[score++]).
+
+The value in register C, which is one of the scores, is divided
+by the max we recorded during the first loop. The index and
+that division result are printed for the user to see. Then the
+loop index is incremented and jump returns us to the top of
+the output loop.
+
+Some languages have decrement addressing modes, or even more
+exotic ones, like double indirect post auto-increment. PAL sticks
+with pre and post increment.
+
+\begin{tabular}{l l }
+    Mode                      &  Syntax \\
+    address of                &  \verb+&arrayvar+ \\
+    value of pointer          &  @pointer \\
+    value with post-increment &  @pointer+ \\
+    value with pre-increment  &  @+pointer \\
+\end{tabular}
+
+Now we have seen PAL in all its glory, which admittedly does not shine
+too brightly.
+It is small and doesn't have too many features, but you can write a lot
+of code in it.
+
+\section{Exercises}
+
+% from the original Intro to Computer Science using Perl
+% (A novices guide to writing software)
+
+\subsection{Counting Down}
+
+Write a PAL program to print odd numbers from 9 down to 1.
+
+\subsection{Interest}
+
+Write a PAL program to calculate the final balance in a banking account
+which begins with \$500 and earns 5\% per year, compounded monthly.
+Modify the program to accept the initial investment, rate of interest,
+and years as user input.
+
+\subsection{Debt}
+
+Write a PAL program to estimate how long it will take to pay off
+a credit card balance.
+
+\subsection{Successful Semester?}
+
+Compute a semester GPA for a student taking five courses. Have the
+user enter the credit hours and grade for each class. Store those
+in PAL arrays. Then, compute the grade points for each course
+and compute the GPA.

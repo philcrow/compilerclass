@@ -1,0 +1,244 @@
+\chapter{Flow of Control}
+
+A language that always runs top to bottom through all the same lines
+is not that useful. We need logic. Specifically, we need if with
+else to choose a code path and while for loops to repeat steps.
+
+\section{Logic with If and Else}
+
+\subsection{Goal}
+
+Our if will allow a program like this sample:
+
+{\footnotesize
+\begin{verbatim}
+    hours = 42
+    rate = 10
+
+    if (hours > 40) {
+        pay = 40 * rate + (hours - 40) * 3 / 2
+    }
+    else {
+        pay = hours * rate
+    }
+\end{verbatim}
+}
+
+\subsection{Grammar Additions}
+
+Even though this spans several lines, we will treat the whole if structure
+as a single statement.
+
+{\footnotesize
+\begin{verbatim}
+    statement: ...
+             | 'if' '(' condition ')' block else?  # if
+\end{verbatim}
+}
+
+The if and parentheses tokens are literal. We need to define
+condition, block, and else. These need new rules.
+
+{\footnotesize
+\begin{verbatim}
+    block: '{' statement* '}' NL? ;
+\end{verbatim}
+}
+
+This leverages the statement definiion we already have. That makes
+the block contents a mini-program. The newline is optional so the
+user can cuddle braces if they like, as in
+
+{\footnotesize
+\begin{verbatim}
+    if (condtion) {
+        ...
+    } else {
+    }
+\end{verbatim}
+}
+
+Note that we are explicitly allowing empty blocks. Not all languages
+do that. In Python you need a statement in every block. It provides
+the builtin `pass' in case you need to do nothing. That's a descendent
+of the old assembly NOOP.
+
+Once we have a defined block, else can use that.
+
+{\footnotesize
+\begin{verbatim}
+    else: 'else' block ;
+\end{verbatim}
+}
+
+Remember that we already made else optional for the if statement.
+Here we are saying what it will have to look like, if it is present.
+
+Lastly, we need a rule for condition.
+
+{\footnotesize
+\begin{verbatim}
+    condition: expression CONDITIONAL expression ;
+\end{verbatim}
+}
+
+This will allow us to compare any two expressions. This becomes vastly
+more complicated if the language has multiple types. Then, you need
+to impute the proper mode of comparison based on the types involved.
+Some languages, notably Perl, offers separate conditional operators
+for numbers and strings. That lets the programmer dictate the type coercion.
+
+The conditional operators are defined as a token.
+
+{\footnotesize
+\begin{verbatim}
+    CONDITIONAL : '==' | '!=' | '<=' | '<' | '>=' | '>' ;
+\end{verbatim}
+}
+
+\subsection{Implementation}
+
+As test programs get longer, it is nice to move to python's here documents
+to specify them. Here is my if test (in TestVisitor.py):
+
+{\footnotesize
+\begin{verbatim}
+        def test_if(self):
+            program = '''
+            hours = 42
+            rate = 10
+
+            if (hours > 40) {
+                pay = 40 * rate + (hours - 40) * 3 / 2
+            }
+            else {
+                pay = hours * rate
+            }
+            '''
+            tree = self.get_tree(program)
+            visitor = Visitor()
+            visitor.visit(tree)
+            self.assertEqual(430, visitor.symbol_table["pay"])
+\end{verbatim}
+}
+
+Notice that I also peek in the symbol table at the variable pay to
+check that the calculation went as expected.
+
+We need to visit methods to make this work: visitCondition and visitIf.
+We can't easily test visitCondition by itself. So, we will use tests
+with if statements to reach it.
+
+{\footnotesize
+\begin{verbatim}
+        def visitCondition(self, ctx:CalcParser.ConditionContext):
+            ''' returns 0 for false, 1 for true'''
+            left = self.visit(ctx.expression(0))
+            right = self.visit(ctx.expression(1))
+            operator = ctx.CONDITIONAL().getText()
+
+            if operator == '==':
+                return 1 if left == right else 0
+            if operator == '!=':
+                return 1 if left != right else 0
+            if operator == '<=':
+                return 1 if left <= right else 0
+            if operator == '<':
+                return 1 if left < right else 0
+            if operator == '>=':
+                return 1 if left >= right else 0
+            if operator == '>':
+                return 1 if left > right else 0
+\end{verbatim}
+}
+
+Python doesn't have a case construct, so I need a series of if statements.
+I could use else, but I'm returning from each, so that would be
+redundant. Retrieving the values to compare is the same as for
+visitAddSubtract. The context object provides the operator via the
+CONDITIONAL method.
+
+Notice the pydoc comment. I'm imposing a constraint: all my visit
+methods will return integers. It is typical that all visit methods
+return the same type. In languages with stronger explicit typing, like java,
+this is an actual requirement.
+
+Once we can compute the truth of the condition, implementing if is not
+complicated.
+
+{\footnotesize
+\begin{verbatim}
+        def visitIf(self, ctx:CalcParser.IfContext):
+            truth = self.visit(ctx.condition())
+            if truth == 1:
+                self.visit(ctx.block())
+            else:
+                self.visit(ctx.else_())
+\end{verbatim}
+}
+
+If visiting the condition returns one, visit the block. Otherwise,
+visit the else block. Note that ANTLR has appended an underscore to
+the name, since else is a python keyword.
+
+We don't even need to implement visitElse. The default provided in
+CalcVisitor will visit its children. And, we don't need to worry about
+the case where these is no else block. The inherited visitor handles
+that too.
+
+\section{While}
+
+\subsection{Goal}
+
+We want to be able to loop with the usual while keyword.
+
+{\footnotesize
+\begin{verbatim}
+    n = 10
+    while (n > 0) {
+        n = n - 1
+    }
+\end{verbatim}
+}
+
+It's a pity we can't actually print ``Liftoff!'' at the end.
+
+Since I have shown how to implement if in detail, I'll leave while
+completely to you. The basics are the same, the implementation just
+needs to check the conditional in its own loop.
+
+\section{Exercises}
+
+\subsection{While}
+
+Implement the while loop.
+
+\subsection{Tests}
+
+Make tests for all variations. In particular, make a test which reaches
+an else block.
+
+\subsection{Else If}
+
+Add an unlimited number of optional else if clauses to the grammar.
+Fix the visitIf method to handle them correctly.
+
+\subsection{Keyboard Input}
+
+It isn't fun to have to hard code values in the programs. Implement
+a new statment
+
+{\footnotesize
+\begin{verbatim}
+    take hours = 'Enter hours worked->'
+\end{verbatim}
+}
+
+In its visitor, issue the prompt to the console, accept the users
+input, and store that in the named variable.
+
+\subsection{Output}
+
+Add a print statement that allows arbitrary text to go to the keyboard.
+Bonus feature: allow interpolation like Python's formatted strings
+with interpolated variables in braces or something similar.

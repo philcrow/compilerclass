@@ -1,0 +1,95 @@
+\chapter{Regular Expressions}
+
+One of the key failings of our digit adder from the last chapter is that
+it only handles one digit numbers. A first improvement was an exercise:
+expand to handle more integers. To do this we need to learn a bit about
+regular expressions.
+
+\section{Multiplicity}
+
+We often want to allow a matched item to be repeated. Here we want more
+digits. In other case we might want multiple statement in a block,
+or multiple parameters in a function definition. Regular expressions
+provide this. There are three basic operators to help us. We can also
+use these in grammar rules.
+
+When we want one or more of something, we use a trailing plus (+). So,
+
+    [0-9]+
+
+is a naive way to solve the single digit problem. Now we can have any
+integer.
+
+We don't need the other multiplicities now, but it makes sense to talk
+about them together.
+
+Sometimes we want something to be optional, but repeatable. One example
+is else if after an if construct. When you use conditional logic, you don't need
+any else or else if blocks. But, you can have as many of the latter
+as you like. For this we use an asterisk (*). Suppose that we have
+already defined what we mean by elseif, using a grammar rule with that name.
+Then we can allow zero or more of those with
+
+    elseif*
+
+Finally, sometimes we want something to be optional. That is, we want
+zero or one. For that we use a question mark (?). For instance, we could
+allow negative numbers with an optional leading minus sign.\footnote{
+This is not the ideal way to account for negative numbers. We should use
+a unary negation operator instead.}
+
+    '-'? [0-9]+
+
+To summarize
+
+\begin{tabular}{l l}
+    Operator &      Meaning \\
+    +        &      One or more \\
+    \verb+*+ &      Zero or more \\
+    ?        &      Optional (zero or one) \\
+\end{tabular}
+
+\section{Alternatives}
+
+We can use
+
+    NUMBER: [0-9]+;
+
+to allow multi-digit integers. But, that allows things we probably don't
+want, like 00001. In some languages a leading zero forces the number to
+be octal. We don't want people to think that is happening in our language.
+
+If we want a more traditional number, we need more than one expression.
+We need to be able to pick between expressions. In regular expressions,
+we use a pipe symbol (\verb+|+) to indicate choose one of these. This allows us
+to have zero and non-zero numbers, but not leading zeros.
+
+{\footnotesize
+\begin{verbatim}
+    NUMBER: '0' | [1-9] [0-9]* ;
+\end{verbatim}
+}
+
+This says: A NUMBER is a literal zero OR any digit 1-9 optionally
+followed by any digit. Note that the notion of `and' is achieved by
+setting two expressions side-by-side, but the order is enforced.
+
+\section{Excercises}
+
+\subsection{Rational Numbers}
+
+In the last chapter I used the python int function to convert our numbers
+from strings for calculation. I could have used float instead. Then,
+we could use rational numbers instead of integers. This seems like
+a good idea. Write a definition of NUMBER which allows for positive
+rational numbers. Hint: alternatives are important here and the first
+one is zero by itself. Hint 2: consult www.json.org for
+a railroad track diagram of number.
+
+\subsection{Variable Names}
+
+Jump ahead in your thinking to imagine our language has variable.
+Write a token rule to define them. What symbols will be allowed in
+variable names? Can all of those be in the first position?
+Note that character classes can any number of ranges, which can
+include letters like a-f. They can also include single characters.

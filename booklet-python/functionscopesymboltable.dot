@@ -1,0 +1,17 @@
+digraph {
+    node [ shape=box ]
+
+    global [label="global\nsymbols dictionary"]
+    outerblock [label="outer block\nsymbols dictionary"]
+    innerblock [label="inner block\nsymbols dictionary"]
+
+    innerblock -> outerblock [label=" previous"]
+    outerblock -> global [label=" previous"]
+
+    outerfun [label="function block\nsymbols dictionary"]
+    outerfun -> global [label=" previous"]
+    outerfun -> innerblock [label=" caller"]
+
+    innerfun [label="inner function block\nsymbols dictionary"]
+    innerfun -> outerfun [label=" previous"]
+}

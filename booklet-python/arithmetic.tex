@@ -1,0 +1,512 @@
+\chapter{Arithmetic}
+
+In his book {\it The Definitive ANTLR 4 Reference}, Terence Parr
+provides a language for basic arithmetic. I'm going to borrow that
+with a few twists.
+
+This version of the language will support addition, subtraction,
+multiplication, division, and parentheses for their usual role in
+controlling precedence. It will also introduce variables which must
+be assigned a value before use, but then can appear anywhere a number
+is allowed.
+
+\section{Grammar}
+
+We need to learn quite a few features of ANTLR grammars to expand our
+languate in this way. This section details those grammar features.
+Later in the chapter we will see how to use the new grammar to perform
+arithmetic by implementing a visitor.
+
+\subsection{Arithmetic}
+
+To start, I will present just the arithmetic, leaving variables for
+a later section.
+
+I'm going to present the new grammar a bit at a time so we can digest it.
+All of this goes in the new Calc.g4.
+
+The first big change is that we need more rules. We want to allow
+multiple statements in a program. This requires introducing a rule
+for statements and making a program depend on those.
+
+{\footnotesize
+\begin{verbatim}
+    grammar Calc;
+
+    program: statement+ ;
+\end{verbatim}
+}
+
+Note that we use the same multiplicity operators for rules as
+for regular expressions. So, this reads: ``A program is one or
+more statements.''
+
+To start, we will have two types of statements: one for expressions
+and one for blank lines. It is not nice to work in a language that
+prevents us from having vertical space between sections of interest.
+This requires the second new grammar feature: alternatives.
+
+{\footnotesize
+\begin{verbatim}
+    statement: expression NL
+             | NL
+             ;
+\end{verbatim}
+}
+
+The pipe symbol means or (which you might also remember from regular
+expressions). This reads as: ``A statement is either an expression
+followed by a new line OR a bare new line.''
+
+Note that it is typical to list each alternative on a separate line
+and to align the colon and pipes vertically. For extra clarity,
+the semi-colon has its own line.
+
+Later we will add a variable assignment statement as an alternative.
+
+Defining what we mean by a statement has introduced two new undefined
+terms. This is typical in grammar work. We have to keep defining
+until everything has a rule or token definition.
+
+For arithmetic we need the four operations and parentheses. Recall
+that precedence matters a lot for this kind of routine Math.
+
+An expression like
+
+{\footnotesize
+\begin{verbatim}
+    3 + 4 * 5
+\end{verbatim}
+}
+
+could be computed exclusively left to right. Then, three plus four
+is seven, which multiplied by five is 35. But, that isn't what we
+would normally do. Instead, multiplication would take precedence.
+Thus, as we learned in school, we should multiply four by five to
+make twenty, then add three for an answer of 23.
+
+When you design a language, you have full control. It is within your
+power to defeat convention. Sometimes that is exactly what you should
+do. But, as Larry Wall frequently writes, you should normally abide
+by the principle of least surprise. It would be very surprising to
+have the rules from school ignored here.
+
+How do we tell ANTLR about our desire for normal precedence?
+We list the higher precedence operation first. That is a simple
+principle, but it requires some contortion when two or more operations
+need to be at the same precedence level, as we are about to see.
+
+{\footnotesize
+\begin{verbatim}
+    expression: '(' expression ')'
+              | expression (STAR|SLASH) expression
+              | expression (PLUS|MINUS) expression
+              | NUMBER
+              ;
+\end{verbatim}
+}
+
+The first alternative is anything in parentheses.\footnote{This doesn't
+actually have to be listed first to win a precedence race. The parenthesis
+token is only valid for this rule, so it would win regardless of order.}
+Then comes multiplication and division in an alternative together.
+They are followed by addition and subtraction in a joint alternative.
+At the end is the humble number.
+
+Note that I have chosen to name the operator tokens rather than using
+literals. This will make it slightly easier to determine which operation
+matched when we have to choose between addition and subtraction or
+multiplication and division.
+
+We have our rules. Now it remains to define the tokens.
+
+{\footnotesize
+\begin{verbatim}
+    NL          : '\r'? '\n' ;
+    NUMBER      : [0-9]+ ;
+    STAR        : '*' ;
+    SLASH       : '/' ;
+    PLUS        : '+' ;
+    MINUS       : '-' ;
+    HS          : [ \t] -> skip ;
+\end{verbatim}
+}
+
+A newline (NL) is an optional carriage return and a required line feed. This
+accounts for the two common line endings. Microsoft Windows uses both
+characters. Unix systems, including Macs, use only the line feed.
+
+A NUMBER is still the integer only first thought version from a prior
+chapter. If you did the exercise to improve it, use that instead.
+Also, consider moving to floats here.
+
+The arithmetic tokens (STAR, SLASH, PLUS, and MINUS) are just names for
+the characters.
+
+Finally, HS is horizontal space. This is the answer to an exercise
+from a prior chapter. This character class includes spaces and tabs.
+The special dash arrow syntax allows us to immediately act within the
+lexer. By choosing skip as that action, the spaces we don't care about
+a discarded.\footnote{If you need to use spaces, you have to be more
+careful. You would need them for a language like python where they matter,
+or if you want to emit source code that looks the same as the original,
+possibly for error message reporting. Ask the internet what to do in
+those cases.}
+
+\subsection{Variables}
+
+To introduce variables, we need only three things: a new statement
+alternative for assigning to them, a new expression for using them
+in other expressions, and a token controlling their legal name pattern.
+
+{\footnotesize
+\begin{verbatim}
+    statement: ...
+             | ID '=' expression NL
+\end{verbatim}
+}
+
+An assignment statement is a variable name (ID), a literal equal sign,
+any expression, and a newline.
+
+{\footnotesize
+\begin{verbatim}
+    expression: ...
+              | ID
+\end{verbatim}
+}
+
+Any legal variable name can be used directly in any other expression
+as if it were a literal number. Note that that grammar cannot enforce
+our rule that a variable needs to have a previous assignment before use.
+That is a semantic rule. We will need to enforce that after the parser
+builds the abstract syntax tree (AST).
+
+The token for a variable name can be simple.
+
+{\footnotesize
+\begin{verbatim}
+    ID : [a-z]+ ;
+\end{verbatim}
+}
+
+This allows any lowercase letters. Most languages are more generous.
+Look for an exercise to address this.
+
+\subsection{Labels}
+
+We can use the grammar from the last sections, but it will require
+quite a bit of extra work. It would generate a single visitStatement
+method and a single visitExpression method. We would need conditional
+logic to figure out which rule matched before we could do our computations.
+
+To help us, ANTLR provides labels. They look like comments, but
+are requests for extra methods with supplied names. At the end of
+each alternative, we add a pound sign (\verb+#+) and the name we want.
+I'll show the complete grammar now, notice the labels.
+
+inject Calc.g4 from (stages/arithmetic)
+
+There are two other labels. In the expression
+alternatives\footnote{Rule alternatives are sometimes called productions.
+That is because in tools like yacc there would be code to make AST nodes
+after the match rule. ANTLR is producing those AST nodes for us, so it
+is still a production, just an automated one.} for multiplication/division
+and addition/subtraction, I labeled the operator match fragment `op`.
+That will generate a useful attribute of the context objects with that
+name. We'll see that this makes it easier to pick between the two
+operations sharing each precedence level.
+
+\section{Visitor Implementation}
+
+Now that we have the grammar, we can generate the lexer, parser, and
+visitor base class.
+
+{\footnotesize
+\begin{verbatim}
+    antlr Calc.g4
+\end{verbatim}
+}
+
+We need the same three code files as for the single digit adder:
+a test, a driver, and the visitor. Since the grammar has the same name,
+we can use the driver from the single digit adder without modification.
+We can also use the test class, but we will want to expand it to cover
+the new language features. Thus, I will only show the new visitor.
+You need to write tests to cover every feature of the language.
+
+\subsection{Numbers}
+
+In a visitor, the methods return something useful. In our case that
+will be the calculation result for expressions. If we were continuing
+compilation with semantic analysis, optimization, and emission, we would
+need to return nodes that formed a tree or digraph.
+
+One of the nice features of ANTLR is that you can work in stages.
+This fits our minimum viable product/enhancement approach. Start with
+the minimum. We need only the visitPrint and visitnNumber to make
+the first test pass.
+
+Here is the test class
+
+{\footnotesize
+\begin{verbatim}
+    class TestVisitor(unittest.TestCase):
+        def test_number(self):
+            program = "4\n"
+            tree = self.get_tree(program)
+            visitor = Visitor()
+            answer = visitor.visit(tree)
+            self.assertEqual(4, answer)
+
+        def get_tree(self, program):
+            input_stream = InputStream(program)
+            lexer = CalcLexer(input_stream)
+            stream = CommonTokenStream(lexer)
+            parser = CalcParser(stream)
+            tree = parser.program()
+            return tree
+
+    if __name__ == '__main__':
+        unittest.main()
+\end{verbatim}
+}
+
+This is similar to the one we saw when testing single digit adding.
+But, I have made a helper (\verb+get_tree+) to handle the standard compilation
+steps that lead to the AST.
+
+Notice that the program in \verb+test_number+ is just a four and a newline.
+We required the newline statement terminator in our grammar. ANTLR
+won't recognize the statement without it. When we visit the tree,
+we will receive the return value of the visitProgram method. We don't need
+to implement that. The inherited one will do nicely.
+
+When the visitor sees our program, it will first capture the number,
+then the new line. From the grammar, this will become a tree like
+this\footnote{This tree uses the labels for statement and
+expression alternatives.}:
+
+{\footnotesize
+\begin{verbatim}
+    program
+       |
+     print    
+    /     \
+   number  NL
+     |
+   NUMBER
+     |
+     4
+\end{verbatim}
+}
+
+Each of the rule alternatives in this tree will have a method in
+the generated CalcVisitor. That's why we need to implement visitPrint
+and visitNumber.
+
+To make this test pass, we need only visitPrint and visitNumber in
+our Visitor.py:
+
+{\footnotesize
+\begin{verbatim}
+    from CalcVisitor import CalcVisitor
+    from CalcParser import CalcParser
+
+    class Visitor(CalcVisitor):
+        def visitPrint(self, ctx:CalcParser.PrintContext):
+            answer = self.visit(ctx.expr())
+            print(answer)
+            return answer
+
+        def visitNumber(self, ctx:CalcParser.NumberContext):
+            answer = int(ctx.NUMBER().getText())
+            return answer
+\end{verbatim}
+}
+
+This visitNumber shares some features with visitProgram from our single
+digit adder. In particular, it invokes NUMBER as a method on the context
+object. In this case, there is only one number in the rule alternative,
+so there is no argument. Calling getText returns the string that matched.
+Python provides the int builtin function to convert that string to an
+actual number. If you expand the definition of number to allow
+decimals, switch from calling into to calling float.
+
+I collected the answer on one line, then returned it on a separate line.
+That allows me to add debugging with the answer as needed.
+
+In visitPrint, I do the actual printing. But, I also return the value
+so tests don't have to trap the console output to make their assertions.
+
+\subsection{Operations}
+
+Now that we are handling number expressions, we can move up to
+calculating. Let's look at visitAddSubtract.
+
+{\footnotesize
+\begin{verbatim}
+        def visitAddSubtract(self, ctx:CalcParser.AddSubtractContext):
+            left = self.visit(ctx.expression(0))
+            right = self.visit(ctx.expression(1))
+            if ctx.op.text == '+':
+                answer = left + right
+            else:
+                anwer = left - right
+            return answer
+\end{verbatim}
+}
+
+There are two expressions involved in these
+operations\footnote{which is why we call them binary operations}.
+If you look in AddSubtractContext in the grammar, you can see that
+the expression method takes an argument. As with the single digit
+adder, call that with zero and one to get the two operands.
+The visit will terminate at either a number or an id expression,
+both of their visitors return integers ready for computations.
+
+In the grammar, I labeled the operator `op`. That created an attribute
+of the context class with that name. It is an object of type
+CommonToken, which has a text attribute. That tells us which symbol
+matched. We know we are either adding or subtracting, so we can
+test for plus sign. If it is plus, we add, otherwise subtract.
+
+Again, I stored the calculation result in answer, so that I can
+add debugging as needed.
+
+I won't show visitMultiplyDivide. You can work that out for yourself.
+
+\subsection{Variables}
+
+There are two visit methods for variables: visitAssign and visitId.
+The first one needs to compute the right hand side expression and
+store it. The second one needs to look up that answer when it appears
+in a subsequent expression. Start with a test
+
+{\footnotesize
+\begin{verbatim}
+        def test_var(self):
+            program = "x=3\nx+4\n"
+            tree = self.get_tree(program)
+            visitor = Visitor()
+            answer = visitor.visit(tree)
+            self.assertEqual(7, answer)
+\end{verbatim}
+}
+
+This also tests add, so you could remove the separate add test if you like.
+Note that I need to follow the language syntax carefully. There must
+be newlines between the statements. The variable must be declared first.
+
+In order to store the values of assigned variables, we need a symbol
+table. At first this will be very simple. It will just be a python
+dictionary\footnote{called a Map in java or a hash in perl}. Later
+we will extend our notion of symbol tables to handle block and function
+scoping.
+
+Every method in the visitor should be able to see the symbol table.
+We need to make it an attribute of the Visitor class. We do this by adding
+a constructor.
+
+{\footnotesize
+\begin{verbatim}
+    class Visitor(CalcVisitor):
+        def __init__(self):
+            self.symbol_table = {}
+\end{verbatim}
+}
+
+In python constructors are called \verb+__init__+. They can receive
+addtional parameters, but the first one is the object under construction.
+To add attributes to class instances, we assign them to self.NAME.
+The value here is an empty dictionary.
+
+In visitAssign, we add or update values in \verb+symbol_table+:
+
+{\footnotesize
+\begin{verbatim}
+        def visitAssign(self, ctx:CalcParser.AssignContext):
+            name = ctx.ID().getText()
+            value = self.visit(ctx.expression())
+            self.symbol_table[name] = value
+            return value
+\end{verbatim}
+}
+
+First, lookup the ID from the context. That's the variable's name.
+Then, visit the expression in the context to calculate that value.
+Store that in the dictionary. No one is using the return value of
+visitAssign, but I return the value anyway out of
+habit.\footnote{In strongly typed languages, like Java, all the
+visit methods must return the same type.}
+
+Finally, using variables is just looking up their values in the
+\verb+symbol_table+.
+
+{\footnotesize
+\begin{verbatim}
+        def visitId(self, ctx:CalcParser.IdContext):
+            name = ctx.ID().getText()
+            answer = self.symbol_table[name]
+            return answer
+\end{verbatim}
+}
+
+Again, the ID token in the context has the name. We just need to
+dereference that in the dictionary to know the value to return.
+If the variable is not there, bad things will happen (python
+will raise a KeyException). We should help the user with a good
+error message.
+
+\section{Exercises}
+
+\subsection{Finish It}
+
+Fill in the rest of the methods not shown above so that you can
+run a sample program like
+
+{\footnotesize
+\begin{verbatim}
+    x = 4
+    3 + 4 * (x - 2)
+\end{verbatim}
+}
+
+\subsection{Unary Negation}
+
+Expand the grammar to include a unary negation expression. Implement
+its visit method so these can work
+
+{\footnotesize
+\begin{verbatim}
+    -3*6
+    14--5
+\end{verbatim}
+}
+
+\subsection{Semantic Complaint}
+
+Currently, when visitId can't find the variable, python raises
+a KeyError. Improve the error reporting. Take it as far as you dare.
+It would be best to terminate the run while saying something like
+
+{\footnotesize
+\begin{verbatim}
+    Use of unassigned variable 'name' at line 2.
+\end{verbatim}
+}
+
+\subsection{Tests}
+
+Add tests to cover subtraction, multiplication, division, variable
+assignment and use, and parentheses. Write little test programs
+which test one feature each. Keeping tests small and focused makes
+them easier to maintain. The last thing you want is to have colleagues
+turn off or delete tests because they are annoying to maintain.
+
+\subsection{Variable Names}
+
+Improve the ID token so it is at least as generous as Java or Python.
+That means allowing uppercase letters, but also numbers after the first
+position. It also allows underscores. In Javascript, you can use dollar
+sign anywhere in the name. Make your choice and define that token.
