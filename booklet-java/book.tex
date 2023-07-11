@@ -1,0 +1,91 @@
+\documentclass{book}
+%\documentclass{scrartcl}
+% borrowed from the patterns book ~/oldHome/writing/patterns/book.tex
+
+%\paperheight=9.5in
+%\paperwidth=6.5in
+%\pdfpageheight=9.5in
+%\pdfpagewidth=6.5in
+
+\usepackage{graphicx}
+\usepackage{makeidx}
+\usepackage{footnote}
+\makeindex
+
+% goto http://web.image.ufl.edu/help/latex/latex_indexes.shtml
+% to read about index creation
+% summary:
+% simple\index{simple}
+% deeper\index{under!something!else}
+% see\index{example|see{simple}}
+
+\textheight     7in
+\textwidth      4in
+%\textheight     9in
+%\textwidth      6.75in
+\topmargin      -0.5in
+\oddsidemargin  0.1in
+\evensidemargin -0.1in
+\setcounter{tocdepth}{1}
+\setcounter{secnumdepth}{3}
+
+\begin{document}
+\frontmatter
+\pagestyle{empty}
+\pagenumbering{roman}
+\title{A Very Introductory Compilers Course}
+\author{Phil Crow}
+\date{}
+\maketitle
+
+\noindent
+\textbf{Compilers} \\
+A Very Introductory Compilers Course \\
+by Phil Crow \\
+
+\vspace{.2in}
+\noindent
+Copyright \copyright 2023 Phil Crow (crow.phil at gmail.com).
+
+\noindent
+This work is covered by two licenses.  First, you may use the code examples
+under the same terms as Perl 5.36.1 or the terms of any later version
+of Perl at your option.
+
+Second, the text is licensed under the
+Attribution-Noncommercial-Share Alike 3.0 United States License
+from Creative Commons.
+To view a copy of this license (and a summary of its terms), visit
+
+\begin{verbatim}
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+\end{verbatim}
+
+Everything is on github\footnote{https://github.com/philcrow/compilerclass/tree/main/book} where I am philcrow.
+
+\newpage
+\pagestyle{headings}
+
+\begin{center}
+\textit{For Dad, who was always curious.}
+\end{center}
+
+\tableofcontents
+
+\include{preface}
+
+\mainmatter
+\pagenumbering{arabic}
+
+\include{gettingstarted}
+\include{addingdigits}
+\include{expressions}
+\include{flowofcontrol}
+\include{functions}
+\include{types}
+\include{oddsandends}
+
+\backmatter
+\addcontentsline{toc}{chapter}{Index}
+\printindex
+\end{document}
