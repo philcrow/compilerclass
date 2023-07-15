@@ -2,35 +2,290 @@
 
 To this point, we have used the awesome AST built for us by ANTLR.
 While it is amazing how far we have gotten with it, there are limits.
-We need to build our own internal structure in order analyze, optimize,
-and emit full programs. In other words, to complete the back half of the
-compiler.
+We need to build our own internal representation, if we want to
+emit assembly. In other words, to complete the back half of the
+compiler we need a new IR.
 
 We will again start with a minimal approach to introduce the concepts.
 The internal representation will be a graph of nodes. Ours will
-be a tree. Some optimization schemes compress this into
-a directed graph when two subtrees are identical.
+be a tree.\footnote{Some optimization schemes compress this into
+a directed graph when two subtrees are identical.}
 
-Each node in this tree will need to be an object of the same type.
-There will be subtypes, but they must share an ancestor.
+Each node in this tree will need to be an object descended from the same type.
 Traditionally, they would all share the same attributes. But, since
-we have objects instead of the more primative structures we would
-be stuck with in a language like C, we don't need to overload in that way.
+we have objects instead of more primative structures, we don't need to
+overload like we would in C.
 
-Each node type will need a constructor which the visitor will call to
-create one. They will also need a method that does something useful.
-Normally, that emits target lanugage output. But, it could also
+Each node type will need a constructor for the visitor to call.
+They will also need a common method that does something useful.
+Our goal is one which emits a target language. But, it could also
 draw something useful for debugging, etc. It could even run the
-program as we have been doing.
+program as we have been doing. In fact, I will start with two
+methods in each node: getIntValue (for primitives like
+numbers) and act (to interpret like we have been doing). Later,
+I will add an emit method to generate assembly output.
 
-Analyzers walk the tree to enforce language rules that the parser
-can't, like missing declarations. Optimizers walk the tree to
-build an optimized replacement. Since they are making the same
-structure, just with different specific nodes, optimizers can
-be mixed and matched.
+Once we have a tree of these nodes, we could implement other tools.
+We could write a set of analyzers which walk the tree to enforce
+language rules, like missing declarations. When we interpret, those
+are run time errors. With an analyzer they can be part of
+compilation. This reports the error earlier, before part
+of the code runs. Analyzers are beyond our scope. We will generate
+errors like this when we notice them as we emit assembly.
+
+Optimizers walk the tree to build an optimized replacement. Since
+they are making the same structure, just with different specific
+nodes, optimizers can be mixed and matched with each other and
+with analyzers. Again, optimizing is an advanced topic beyond our scope.
 
 To distinguish this new tree from the AST built during parsing,
 we call this a decorated tree or an internal representation (IR).
 
 \section{Nodes}
 
+Our Node class is quite simple.
+
+{\footnotesize
+\begin{verbatim}
+    class Node:
+
+        def act(self):
+            pass
+
+        def getIntValue(self):
+            pass
+\end{verbatim}
+}
+
+These are the methods each node could implement: act and getIntValue.
+The methods implemented with pass statements in the Node parent class
+will work for the children that don't need one of the methods.
+
+To start consider the simplest program in our language:
+
+{\footnotesize
+\begin{verbatim}
+    4
+\end{verbatim}
+}
+
+When we interpret, this prints `4'.
+When this parses, the AST will look like this:
+
+{\footnotesize
+\begin{verbatim}
+    program
+       |
+     print
+       |
+     number
+       |
+       4
+\end{verbatim}
+}
+
+This needs the first three node types: ProgramNode, PrintNode, and NumberNode.
+I'll show them in reverse order, because they rise in complexity in that
+order.
+
+\subsection{NumberNode}
+
+{\footnotesize
+\begin{verbatim}
+    from Node import Node
+    class NumberNode(Node):
+        def __init__(self, value):
+            self.value = value
+
+        def getIntValue(self):
+            return self.value
+\end{verbatim}
+}
+
+This is a leaf node. It only needs to implement getIntValue.
+Its parent will take care of act (and emit when we add it).
+All this node needs to do it keep track of the value of its
+number and return it upon request.
+
+\subsection{PrintNode}
+
+{\footnotesize
+\begin{verbatim}
+    from Node import Node
+  
+    class PrintNode(Node):
+        def __init__(self, valueNode):
+            self.valueNode = valueNode
+
+        def act(self):
+            print(self.getIntValue())
+            return self.getIntValue()
+
+        def getIntValue(self):
+            return self.valueNode.getIntValue()
+\end{verbatim}
+}
+
+The statement production for a bare expression will become a PrintNode.
+This needs to store the child node during construction. If asked
+for the int value, it delegate to that child. Similiarly, to act
+during interpretation it looks up the value, prints it to stanard output,
+and returns it.
+
+\subsection{ProgramNode}
+
+Finally, the most complicated of our nodes so far will keep a list
+of statements and run them in order when asked to act.
+
+{\footnotesize
+\begin{verbatim}
+    from Node import Node
+  
+    class ProgramNode(Node):
+        def __init__(self, statements):
+            self.statements = statements
+
+        def act(self):
+            for statement in self.statements:
+                statement.act()
+
+        def getIntValue(self):
+            return 0;
+\end{verbatim}
+}
+
+Note that the whole program does not have a useful value to deliver.
+We hope no one calls getIntValue on this. If they do, they just get
+a zero.
+
+To act on the statements, we just loop through them once in order
+asking each of them to act.
+
+\section{Making an IR}
+
+Previously our visitor interpreted the program. Now we will instead
+build a tree of Node objects. If the caller wants to interpret the
+program, they will call act. Later, they could instead could call emit
+to produce assembly.
+
+{\footnotesize
+\begin{verbatim}
+    from CalcVisitor import CalcVisitor
+    from CalcParser import CalcParser
+    from ProgramNode import ProgramNode
+    from PrintNode import PrintNode
+    from NumberNode import NumberNode
+
+    class NodeVisitor(CalcVisitor):
+        def visitProgram(self, ctx:CalcParser.ProgramContext):
+            statements = []
+            rawStatements = ctx.statement()
+            for rawStatement in rawStatements:
+                statementNode = self.visit(rawStatement)
+                if statementNode is not None:
+                    statements.append(statementNode)
+            return ProgramNode(statements)
+
+        def visitPrint(self, ctx:CalcParser.PrintContext):
+            value = self.visit(ctx.expression())
+            return PrintNode(value)
+
+        def visitNumber(self, ctx:CalcParser.NumberContext):
+            value = int(ctx.NUMBER().getText())
+            return NumberNode(value)
+\end{verbatim}
+}
+
+It is easier to begin reading at the bottom. The visitNumber method
+begins in the same way as the interpreting version, by looking up
+the text the parser found.\footnote{Remember that there is no reason
+to guard against conversion errors here, since the parser would
+only bring us here if it found a valid number.}
+
+Then, instead of returning that directly, we make a new
+NumberNode with that as its value.
+
+The parent of this number in our simple program is a print statement.
+The visitPrint method finds its value by visiting the expresssion, as
+it did while interpreting. But, now two things are different. First,
+the result of calling visit on the child expression is a Node of some
+kind. Second, we need to make a PrintNode to house that child Node.
+
+The tree walk is really directed in visitProgram. That asks for
+the raw statements found by the parser and loops over them.
+For each one, it calls visit receiving whatever Node type that
+produces. If the statement makes no node (think blank lines)
+it does not store the result.\footnote{If you are going to emit
+the original source code, you have to capture those too.}
+If the Node is not None, it goes into the list of statements
+which are given to the ProgramNode constructor.
+
+Note again that calling this visitor only returns the ProgramNode
+which contains its list of child statements. The caller needs
+to call act to gain the original behavior or emit to produce assembly.
+
+\section{Testing the IR}
+
+In software we often hear the terms white box and black testing.
+Where that latter certainly implies that we cannot see inside whatever
+we are testing. My problem with these as opposites is that white
+boxes are also opaque. I prefer to use the terms transparnet and opaque
+testing. In this case, we will use transparent testing. This means
+that the test will use intimate knowledge of the code being tested.
+
+Here is the new test module to transparently test the NodeVisitor
+presented in the prior section.
+
+{\footnotesize
+\begin{verbatim}
+    from antlr4 import *
+    from CalcLexer import CalcLexer
+    from CalcParser import CalcParser
+    from NodeVisitor import NodeVisitor
+    import unittest
+
+    class TestNodeVisitor(unittest.TestCase):
+        def test_number(self):
+            program = "4\n"
+            tree = self.get_tree(program)
+            visitor = NodeVisitor()
+            answer = visitor.visit(tree)
+            self.assertEqual(1, len(answer.statements))
+            print_statement = answer.statements[0]
+            self.assertEqual(4, print_statement.getIntValue())
+
+    def get_tree(self, program):
+        input_stream = InputStream(program)
+        lexer = CalcLexer(input_stream)
+        stream = CommonTokenStream(lexer)
+        parser = CalcParser(stream)
+        tree = parser.program()
+        return tree
+
+if __name__ == '__main__':
+    unittest.main()
+\end{verbatim}
+}
+
+The \verb+get_tree+ method is the same as in our prior tests. It takes
+us through the parsing step which builds the AST.
+
+The \verb+test_number+ method call \verb+get_tree+ to obtain the AST
+as before. Then it visits the tree. In earlier tests we could then
+examine the result directly for numeric answers. Here we receive
+a ProgramNode. First, I decided to check that it contains the correct
+number of statements, one in this case. Then I peeked inside
+the ProgramNode to retrieve the PrintNode and tested its value
+which should be four. This is transparent testing, because I have
+used node's internal methods at will. This is a typical approach
+for a unit test.
+
+\section{Completing the IR}
+
+We now have a working and tested IR for a subset of our language.
+To return to the interpreter we had before, we need to implement
+a lot more visit methods. Most of those will need to construct
+Node objects.\footnote{Some don't need to do that, like parentheses.
+Again, if you needed to regenerate the original program you would
+need a node for those too. But for assembly emitting or interpreting
+you don't.}
